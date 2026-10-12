@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { MemberForm } from "@/components/dashboard/member-form";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +8,24 @@ import { getCurrentUser, getOwnMember, isAdmin } from "./data";
 import { STATUSES } from "./members";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 
-export default async function DashboardPage() {
+export default function DashboardPage() {
+  // Dados dependem da sessão (cookies): precisam ficar dentro de Suspense.
+  return (
+    <Suspense fallback={<Loading />}>
+      <DashboardContent />
+    </Suspense>
+  );
+}
+
+function Loading() {
+  return (
+    <main className="mx-auto w-full max-w-2xl px-4 py-10 text-sm text-muted-foreground" aria-busy>
+      Carregando…
+    </main>
+  );
+}
+
+async function DashboardContent() {
   const user = await getCurrentUser();
   if (!user) redirect("/");
 

@@ -1,15 +1,29 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { MembersTable } from "@/components/dashboard/members-table";
 import { MembersSearch } from "@/components/dashboard/members-search";
 import { buttonVariants } from "@/components/ui/button";
 import { getCurrentUser, isAdmin, listMembers } from "../data";
 
-export default async function AdminPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string | string[] }>;
-}) {
+type SearchParams = Promise<{ q?: string | string[] }>;
+
+export default function AdminPage({ searchParams }: { searchParams: SearchParams }) {
+  // searchParams e a sessão são dados de runtime: leitura dentro de Suspense.
+  return (
+    <Suspense
+      fallback={
+        <main className="mx-auto w-full max-w-5xl px-4 py-10 text-sm text-muted-foreground" aria-busy>
+          Carregando…
+        </main>
+      }
+    >
+      <AdminContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function AdminContent({ searchParams }: { searchParams: SearchParams }) {
   const user = await getCurrentUser();
   if (!user) redirect("/");
   if (!(await isAdmin(user.id))) notFound();
