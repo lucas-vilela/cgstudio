@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
+import { SLOTS_PUBLICOS_TAG } from "@/lib/slots";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { isAdmin } from "../data";
 import { friendlyError } from "./errors";
@@ -24,6 +25,7 @@ async function admin(): Promise<
 }
 
 const refresh = () => revalidatePath("/dashboard/admin", "layout");
+const refreshHome = () => updateTag(SLOTS_PUBLICOS_TAG);
 
 export async function registerPayment(input: {
   memberId: string;
@@ -104,6 +106,7 @@ export async function saveSlot(input: SlotInput & { id: number | null }): Promis
     if (error || !data?.length) return fail(friendlyError(error, "Não foi possível salvar o slot."));
   }
   refresh();
+  refreshHome();
   return { ok: true, data: undefined };
 }
 
@@ -113,6 +116,7 @@ export async function setSlotAtivo(slotId: number, ativo: boolean): Promise<Resu
   const { data, error } = await a.supabase.from("slots").update({ ativo }).eq("id", slotId).select("id");
   if (error || !data?.length) return fail(friendlyError(error, "Não foi possível alterar o slot."));
   refresh();
+  refreshHome();
   return { ok: true, data: undefined };
 }
 
