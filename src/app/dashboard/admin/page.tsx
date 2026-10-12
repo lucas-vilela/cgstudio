@@ -1,53 +1,54 @@
-import Link from "next/link";
 import { Suspense } from "react";
-import { notFound, redirect } from "next/navigation";
-import { MembersTable } from "@/components/dashboard/members-table";
+import { MembersTable } from "@/components/dashboard/admin/members-table";
+import { PageLoading } from "@/components/dashboard/admin/page-loading";
+import { Panel } from "@/components/dashboard/admin/section";
+import { SummaryCards } from "@/components/dashboard/admin/summary-cards";
+import { VencimentosProximos } from "@/components/dashboard/admin/vencimentos-proximos";
 import { MembersSearch } from "@/components/dashboard/members-search";
-import { buttonVariants } from "@/components/ui/button";
-import { getCurrentUser, isAdmin, listMembers } from "../data";
+import { requireAdmin } from "./guard";
+import { getAdminMembers, getPlans, getResumo, getVencimentosProximos } from "./queries";
 
 type SearchParams = Promise<{ q?: string | string[] }>;
 
 export default function AdminPage({ searchParams }: { searchParams: SearchParams }) {
-  // searchParams e a sessão são dados de runtime: leitura dentro de Suspense.
+  // Sessão e searchParams são dados de runtime: leitura dentro de Suspense.
   return (
-    <Suspense
-      fallback={
-        <main className="mx-auto w-full max-w-5xl px-4 py-10 text-sm text-muted-foreground" aria-busy>
-          Carregando…
-        </main>
-      }
-    >
+    <Suspense fallback={<PageLoading />}>
       <AdminContent searchParams={searchParams} />
     </Suspense>
   );
 }
 
 async function AdminContent({ searchParams }: { searchParams: SearchParams }) {
-  const user = await getCurrentUser();
-  if (!user) redirect("/");
-  if (!(await isAdmin(user.id))) notFound();
-
+  await requireAdmin();
   const { q } = await searchParams;
   const query = Array.isArray(q) ? (q[0] ?? "") : (q ?? "");
-  const members = await listMembers(query);
+
+  const [resumo, vencimentos, members, plans] = await Promise.all([
+    getResumo(),
+    getVencimentosProximos(),
+    getAdminMembers(query),
+    getPlans(),
+  ]);
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-10">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold">Alunos</h1>
-          <p className="text-sm text-muted-foreground">
-            {members.length} {members.length === 1 ? "aluno" : "alunos"}
-            {query ? ` para “${query}”` : ""}
-          </p>
+    <div className="flex flex-col gap-6">
+      <h1 className="text-4xl">Alunos</h1>
+      <SummaryCards {...resumo} />
+      <VencimentosProximos items={vencimentos} />
+      <Panel aria-labelledby="alunos-title">
+        <div className="mb-4 flex flex-col gap-3">
+          <div>
+            <h2 id="alunos-title" className="text-3xl">Todos os alunos</h2>
+            <p className="text-sm text-muted-foreground">
+              {members.length} {members.length === 1 ? "aluno" : "alunos"}
+              {query ? ` para “${query}”` : ""}
+            </p>
+          </div>
+          <MembersSearch defaultValue={query} />
         </div>
-        <Link href="/dashboard" className={buttonVariants({ variant: "outline" })}>
-          Meu cadastro
-        </Link>
-      </header>
-      <MembersSearch defaultValue={query} />
-      <MembersTable members={members} />
-    </main>
+        <MembersTable members={members} plans={plans} />
+      </Panel>
+    </div>
   );
 }

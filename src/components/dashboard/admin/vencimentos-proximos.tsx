@@ -1,0 +1,51 @@
+import { diasLabel, formatDate } from "@/app/dashboard/admin/format";
+import type { Vencimento } from "@/app/dashboard/admin/types";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
+import { RegisterPaymentButton } from "./register-payment-dialog";
+import { EmptyNote, Panel } from "./section";
+import { Tag } from "./tag";
+
+export function VencimentosProximos({ items }: { items: Vencimento[] }) {
+  return (
+    <Panel aria-labelledby="venc-title">
+      <h2 id="venc-title" className="text-3xl">Vencimentos próximos</h2>
+      <p className="mb-3 text-sm text-muted-foreground">Quem vence nos próximos 5 dias.</p>
+      {items.length === 0 ? (
+        <EmptyNote>Nenhum vencimento nos próximos 5 dias.</EmptyNote>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Aluno</TableHead>
+              <TableHead>Plano</TableHead>
+              <TableHead>Vence</TableHead>
+              <TableHead className="text-right"><span className="sr-only">Ação</span></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map((v) => (
+              <TableRow key={v.member_id}>
+                <TableCell className="font-medium">{v.nome ?? "—"}</TableCell>
+                <TableCell>{v.plano_nome ?? "—"}</TableCell>
+                <TableCell>
+                  <div className="flex flex-col items-start gap-1">
+                    <Tag hot={v.dias_restantes <= 1}>{diasLabel(v.dias_restantes)}</Tag>
+                    <span className="text-xs text-muted-foreground">{formatDate(v.vencimento)}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-right">
+                  <RegisterPaymentButton
+                    label="Registrar"
+                    member={{ id: v.member_id, nome: v.nome, valor: v.valor }}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </Panel>
+  );
+}

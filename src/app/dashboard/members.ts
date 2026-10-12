@@ -1,18 +1,11 @@
 // Tipos e validação compartilhados do cadastro de alunos (colunas de public.members).
-export const PLANS = [
-  { value: "mensal", label: "Mensal" },
-  { value: "trimestral", label: "Trimestral" },
-  { value: "semestral", label: "Semestral" },
-  { value: "anual", label: "Anual" },
-] as const;
-
+// Planos vêm da tabela `plans` (ver admin/types.ts), não de constantes.
 export const STATUSES = [
   { value: "pendente", label: "Pendente" },
   { value: "ativo", label: "Ativo" },
   { value: "inativo", label: "Inativo" },
 ] as const;
 
-export type Plan = (typeof PLANS)[number]["value"];
 export type MemberStatus = (typeof STATUSES)[number]["value"];
 
 export type Member = {
@@ -21,16 +14,18 @@ export type Member = {
   nome: string | null;
   email: string | null;
   telefone: string | null;
-  plano: string | null;
   status: MemberStatus;
+  plan_id: number | null;
+  valor_acordado: number | null;
+  vencimento: string | null;
   created_at: string;
 };
 
 export type MemberInput = { nome: string; telefone: string };
 export type FieldErrors = Partial<Record<keyof MemberInput, string>>;
 
-export const planLabel = (v: string | null) =>
-  PLANS.find((p) => p.value === v)?.label ?? v ?? "—";
+export const statusLabel = (v: string) =>
+  STATUSES.find((s) => s.value === v)?.label ?? v;
 
 export function normalizePhone(raw: string) {
   return raw.replace(/\D/g, "");

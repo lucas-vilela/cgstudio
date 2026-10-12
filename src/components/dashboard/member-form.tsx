@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { saveMember, type SaveState } from "@/app/dashboard/actions";
-import { formatPhone, planLabel, type Member } from "@/app/dashboard/members";
+import { formatPhone, type Member } from "@/app/dashboard/members";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -39,7 +39,7 @@ export function MemberForm({ member }: { member: Member | null }) {
       <CardHeader>
         <CardTitle>Seus dados</CardTitle>
         <CardDescription>
-          Mantenha seu nome e telefone atualizados.
+          Mantenha seu nome e telefone atualizados. Plano e status são alterados pela recepção.
         </CardDescription>
       </CardHeader>
       <form action={action} noValidate>
@@ -62,11 +62,6 @@ export function MemberForm({ member }: { member: Member | null }) {
           <div className="flex flex-col gap-1.5">
             <label htmlFor="email" className="text-sm font-medium">E-mail</label>
             <Input id="email" value={member.email ?? ""} readOnly disabled />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="plano" className="text-sm font-medium">Plano</label>
-            <Input id="plano" value={planLabel(member.plano)} readOnly disabled />
-            <p className="text-xs text-muted-foreground">Plano e status são alterados pela recepção.</p>
           </div>
         </CardContent>
         <CardFooter className="gap-3">
