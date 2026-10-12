@@ -1,44 +1,26 @@
-import { SectionTitle } from "./section";
+import { SectionTitle } from "./section-title";
 
+// Horários ilustrativos — o calendário real fica no painel do aluno.
 const rows = [
-  ["Segunda a sexta", "05h30 às 22h30"],
-  ["Sábado", "08h às 14h"],
-  ["Domingo e feriados", "09h às 12h"],
-];
-const classes = [
-  ["06h30", "Funcional"],
-  ["12h15", "Spinning"],
-  ["18h30", "Boxe"],
-  ["19h30", "Mobilidade"],
+  ["Segunda a sexta", "07h às 20h"],
+  ["Sábado", "Sob agendamento"],
 ];
 
 export function Schedule() {
   return (
-    <section id="horarios" className="mx-auto max-w-6xl px-4 py-20 md:py-28">
-      <SectionTitle kicker="Horários">Abre cedo. Fecha tarde.</SectionTitle>
-      <div className="grid gap-12 md:grid-cols-2">
-        <div>
-          <h3 className="mb-4 text-sm tracking-[0.2em] text-[var(--cg-dim)] uppercase">Funcionamento</h3>
-          <dl className="divide-y divide-[var(--cg-line)] border-y border-[var(--cg-line)]">
-            {rows.map(([d, h]) => (
-              <div key={d} className="flex justify-between gap-4 py-4">
-                <dt>{d}</dt>
-                <dd className="cg-display text-2xl text-[var(--cg-signal)]">{h}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-        <div>
-          <h3 className="mb-4 text-sm tracking-[0.2em] text-[var(--cg-dim)] uppercase">Aulas em grupo (seg a sex)</h3>
-          <ul className="divide-y divide-[var(--cg-line)] border-y border-[var(--cg-line)]">
-            {classes.map(([h, c]) => (
-              <li key={h} className="flex justify-between gap-4 py-4">
-                <span className="cg-display text-2xl">{h}</span>
-                <span className="text-[var(--cg-dim)]">{c}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+    <section id="horarios" className="border-t border-border py-16 md:py-20">
+      <div className="mx-auto max-w-6xl px-4">
+        <SectionTitle label="Horários" note="Turmas fixas de segunda a sexta. Entre com sua conta Google para ver as vagas e escolher os seus horários.">
+          Horários que cabem na semana
+        </SectionTitle>
+        <dl className="rounded-[20px] border border-border bg-surface px-6">
+          {rows.map(([d, h]) => (
+            <div key={d} className="flex items-baseline justify-between gap-4 border-b border-border py-5 last:border-0">
+              <dt className="text-muted-foreground">{d}</dt>
+              <dd className="text-lg font-semibold">{h}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
     </section>
   );

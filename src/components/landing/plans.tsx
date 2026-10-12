@@ -1,47 +1,32 @@
-import { Check } from "lucide-react";
-import { SectionTitle } from "./section";
-import { GoogleCta } from "./google-cta";
+import { SectionTitle } from "./section-title";
 
-// Valores ilustrativos — ajustar com a tabela real da academia.
+// Valores fictícios (especificacao-v1.md) — trocar pelos reais.
 const plans = [
-  { name: "Essencial", price: "99", note: "Musculação livre", perks: ["Acesso ao salão", "Avaliação inicial", "App de treino"], featured: false },
-  { name: "Studio", price: "149", note: "Musculação + aulas em grupo", perks: ["Tudo do Essencial", "Funcional, spinning e boxe", "Reserva de vaga pelo app"], featured: true },
-  { name: "Ilimitado", price: "199", note: "Tudo, sem restrição", perks: ["Tudo do Studio", "Mobilidade e workshops", "Traga um convidado por mês"], featured: false },
+  { name: "1x", price: "75", note: "1 aula por semana" },
+  { name: "2x", price: "80", note: "2 aulas por semana" },
+  { name: "3x", price: "100", note: "3 aulas por semana" },
 ];
 
 export function Plans() {
   return (
-    <section id="planos" className="bg-[var(--cg-ink-2)] py-20 md:py-28">
+    <section id="planos" className="border-t border-border py-16 md:py-20">
       <div className="mx-auto max-w-6xl px-4">
-        <SectionTitle kicker="Planos">Sem fidelidade. Sem letra miúda.</SectionTitle>
-        <div className="grid gap-6 md:grid-cols-3">
+        <SectionTitle label="Planos" note="Cobrança mensal, pela frequência semanal. Pagamento combinado direto com o studio.">
+          Escolha sua frequência
+        </SectionTitle>
+        <ul className="grid gap-4 md:grid-cols-3">
           {plans.map((p) => (
-            <article
-              key={p.name}
-              className={`flex flex-col rounded-2xl border p-7 ${p.featured ? "border-[var(--cg-signal)] bg-[var(--cg-ink)]" : "border-[var(--cg-line)]"}`}
-            >
-              <h3 className="cg-display text-3xl">{p.name}</h3>
-              <p className="mt-1 text-sm text-[var(--cg-dim)]">{p.note}</p>
+            <li key={p.name} className="rounded-[20px] border border-border bg-surface p-7">
+              <h3 className="text-4xl">{p.name}</h3>
+              <p className="mt-1 text-muted-foreground">{p.note}</p>
               <p className="mt-6 flex items-baseline gap-1">
-                <span className="text-sm">R$</span>
-                <span className="cg-display text-6xl">{p.price}</span>
-                <span className="text-sm text-[var(--cg-dim)]">/mês</span>
+                <span className="text-sm text-muted-foreground">R$</span>
+                <span className="font-display text-6xl font-bold leading-none">{p.price}</span>
+                <span className="text-sm text-muted-foreground">/mês</span>
               </p>
-              <ul className="mt-6 flex-1 space-y-3 text-sm">
-                {p.perks.map((perk) => (
-                  <li key={perk} className="flex gap-2">
-                    <Check aria-hidden className="mt-0.5 size-4 shrink-0 text-[var(--cg-signal)]" />
-                    {perk}
-                  </li>
-                ))}
-              </ul>
-            </article>
+            </li>
           ))}
-        </div>
-        <div className="mt-12 flex flex-wrap items-center gap-4">
-          <GoogleCta />
-          <span className="text-sm text-[var(--cg-dim)]">Entre com sua conta Google para escolher o plano.</span>
-        </div>
+        </ul>
       </div>
     </section>
   );

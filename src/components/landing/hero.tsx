@@ -1,38 +1,32 @@
+import Image from "next/image";
 import { GoogleCta } from "./google-cta";
-
-const ticker = ["Musculação", "Funcional", "Spinning", "Boxe", "Mobilidade", "Treino em grupo"];
 
 export function Hero() {
   return (
-    <section id="topo" className="cg-grain relative overflow-hidden">
-      <div className="relative mx-auto max-w-6xl px-4 pt-16 pb-20 md:pt-28 md:pb-28">
-        <p className="mb-6 text-sm font-medium tracking-[0.2em] text-[var(--cg-signal)] uppercase">
-          Academia · treino de perto
-        </p>
-        <h1 className="cg-display text-[clamp(3.5rem,13vw,10rem)]">
-          Treino com
+    <section id="topo" className="mx-auto grid max-w-6xl items-center gap-10 px-4 pt-12 pb-16 md:grid-cols-[1.1fr_0.9fr] md:pt-20 md:pb-24">
+      <div className="cg-rise">
+        <p className="cg-label">Studio de movimento</p>
+        <h1 className="mt-4 text-[clamp(3rem,9vw,5.25rem)]">
+          Corpo em ação,
           <br />
-          <span className="text-[var(--cg-signal)]">nome</span> e sobrenome.
+          <em className="font-normal text-accent">mente em equilíbrio.</em>
         </h1>
-        <p className="mt-8 max-w-xl text-lg text-[var(--cg-dim)]">
-          No CG Studio ninguém é número de catraca. Turmas pequenas, professores
-          que corrigem seu movimento e uma rotina que cabe na sua semana.
+        <p className="mt-5 mb-8 max-w-[44ch] text-lg text-muted-foreground">
+          Turmas pequenas, atenção ao seu movimento e horários que cabem na sua semana.
         </p>
-        <div className="mt-10 flex flex-wrap items-center gap-4">
-          <GoogleCta />
-          <a href="#planos" className="min-h-12 content-center px-2 text-[var(--cg-bone)] underline underline-offset-4 decoration-[var(--cg-line)] hover:decoration-[var(--cg-signal)]">
-            Ver planos
+        <div className="flex flex-wrap gap-3">
+          <GoogleCta className="h-12 px-7" />
+          <a
+            href="#horarios"
+            className="inline-flex h-12 items-center rounded-full border border-border px-7 text-[15px] font-semibold hover:border-foreground"
+          >
+            Ver horários
           </a>
         </div>
       </div>
-      <div aria-hidden className="overflow-hidden border-y border-[var(--cg-line)] bg-[var(--cg-ink-2)] py-3">
-        <div className="cg-marquee cg-display flex w-max gap-10 text-xl whitespace-nowrap text-[var(--cg-dim)]">
-          {[...ticker, ...ticker, ...ticker, ...ticker].map((t, i) => (
-            <span key={i} className="flex gap-10">
-              {t} <span className="text-[var(--cg-signal)]">/</span>
-            </span>
-          ))}
-        </div>
+      <div aria-hidden className="cg-rise cg-rise-2 flex justify-center gap-2">
+        <Image src="/brand/pose1.svg" alt="" width={230} height={230} className="w-[48%] max-w-[230px] opacity-90" />
+        <Image src="/brand/pose2.svg" alt="" width={230} height={230} className="w-[48%] max-w-[230px] opacity-90" />
       </div>
     </section>
   );

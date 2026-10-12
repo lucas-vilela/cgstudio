@@ -5,11 +5,14 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: ui-monospace, monospace;
+  --font-display: var(--font-lobster), cursive;
+  --font-heading: var(--font-display);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -48,73 +51,42 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Tema único CG Studio (direção de design aprovada). Sem sombras: hierarquia por contraste e borda. */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --surface: #272727;
+  --surface-2: #2d2d2d;
+  --background: #1e1e1e;
+  --foreground: #ffffff;
+  --card: var(--surface);
+  --card-foreground: #ffffff;
+  --popover: var(--surface);
+  --popover-foreground: #ffffff;
+  --primary: #ff3420;
+  --primary-foreground: #ffffff;
+  --secondary: var(--surface-2);
+  --secondary-foreground: #ffffff;
+  --muted: var(--surface-2);
+  --muted-foreground: rgb(255 255 255 / 62%);
+  --accent: #ff3420;
+  --accent-foreground: #ffffff;
+  --destructive: #ff3420;
+  --border: rgb(255 255 255 / 12%);
+  --input: rgb(255 255 255 / 12%);
+  --ring: #ffffff;
+  --chart-1: #ff3420;
+  --chart-2: #ffffff;
+  --chart-3: rgb(255 255 255 / 62%);
+  --chart-4: rgb(255 255 255 / 40%);
+  --chart-5: rgb(255 255 255 / 20%);
+  --radius: 1rem;
+  --sidebar: var(--surface);
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #ff3420;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--surface-2);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgb(255 255 255 / 12%);
+  --sidebar-ring: #ffffff;
 }
 
 @layer base {
@@ -127,46 +99,38 @@
   html {
     @apply font-sans;
   }
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    line-height: 1.05;
+  }
 }
 
-/* CG Studio landing — identidade própria, escopada em .cg */
-.cg {
-  --cg-ink: oklch(0.16 0.008 60);
-  --cg-ink-2: oklch(0.21 0.01 60);
-  --cg-bone: oklch(0.95 0.02 85);
-  --cg-dim: oklch(0.72 0.015 80);
-  --cg-line: oklch(0.95 0.02 85 / 14%);
-  --cg-signal: oklch(0.72 0.19 45);
-  background: var(--cg-ink);
-  color: var(--cg-bone);
-}
-.cg-display {
-  font-family: var(--font-display), Impact, sans-serif;
+/* Landing */
+.cg-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 600 12px/1 var(--font-inter), sans-serif;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  letter-spacing: 0.01em;
-  line-height: 0.92;
+  color: var(--accent);
 }
-.cg a:focus-visible,
-.cg button:focus-visible {
-  outline: 2px solid var(--cg-signal);
-  outline-offset: 3px;
-}
-.cg-grain::before {
+.cg-label::before {
   content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.07;
-  background-image: repeating-linear-gradient(
-    135deg,
-    var(--cg-bone) 0 1px,
-    transparent 1px 7px
-  );
+  flex: none;
+  width: 12px;
+  height: 18px;
+  background: url(/brand/halter-limpo.svg) center / contain no-repeat;
 }
-@keyframes cg-marquee {
-  to { transform: translateX(-50%); }
+@keyframes cg-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
 }
-.cg-marquee { animation: cg-marquee 28s linear infinite; }
+.cg-rise { animation: cg-rise 0.7s ease-out both; }
+.cg-rise-2 { animation-delay: 0.12s; }
 @media (prefers-reduced-motion: reduce) {
-  .cg-marquee { animation: none; }
+  .cg-rise { animation: none; }
+  html { scroll-behavior: auto; }
 }
+html { scroll-behavior: smooth; scroll-padding-top: 6rem; }
