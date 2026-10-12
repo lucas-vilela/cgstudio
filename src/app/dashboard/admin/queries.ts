@@ -100,16 +100,19 @@ export async function getAdminMembers(query: string): Promise<AdminMember[]> {
   }
   const [fin, acordados, ligacoes] = await Promise.all([
     req,
-    supabase.from("members").select("id,valor_acordado").not("valor_acordado", "is", null),
+    supabase.from("members").select("id,valor_acordado,auth_user_id"),
     getTodasLigacoesTreino(supabase),
   ]);
   const rows = check(fin, "member_financeiro");
+  const extras = check(acordados, "members") as {
+    id: string;
+    valor_acordado: number | null;
+    auth_user_id: string | null;
+  }[];
   const acordado = new Map<string, number>(
-    (check(acordados, "members") as { id: string; valor_acordado: number }[]).map((m) => [
-      m.id,
-      num(m.valor_acordado),
-    ]),
+    extras.filter((m) => m.valor_acordado != null).map((m) => [m.id, num(m.valor_acordado)]),
   );
+  const semLogin = new Set(extras.filter((m) => !m.auth_user_id).map((m) => m.id));
   const treinos = new Map<string, number[]>();
   for (const l of ligacoes) {
     treinos.set(l.member_id, [...(treinos.get(l.member_id) ?? []), l.treino_id]);
@@ -119,6 +122,7 @@ export async function getAdminMembers(query: string): Promise<AdminMember[]> {
     valor: r.valor == null ? null : num(r.valor),
     valor_acordado: acordado.get(r.member_id) ?? null,
     treino_ids: treinos.get(r.member_id) ?? [],
+    tem_login: !semLogin.has(r.member_id),
   }));
 }
 
@@ -228,7 +232,8 @@ export async function getAdminsAndCandidates(): Promise<{
   const supabase = await createClient();
   const [roles, members] = await Promise.all([
     supabase.from("user_roles").select("user_id").eq("role", "admin"),
-    supabase.from("members").select("auth_user_id,nome,email").order("nome").limit(500),
+    // Só quem tem conta Google pode virar admin.
+    supabase.from("members").select("auth_user_id,nome,email").not("auth_user_id", "is", null).order("nome").limit(500),
   ]);
   const adminIds = new Set((check(roles, "user_roles") as { user_id: string }[]).map((r) => r.user_id));
   const byUser = new Map<string, AdminUser>();

@@ -10,7 +10,7 @@ export type MemberStatus = (typeof STATUSES)[number]["value"];
 
 export type Member = {
   id: string;
-  auth_user_id: string;
+  auth_user_id: string | null;
   nome: string | null;
   email: string | null;
   telefone: string | null;
@@ -53,4 +53,18 @@ export function validateMember(
 
   if (Object.keys(errors).length) return { errors };
   return { data: { nome, telefone } };
+}
+
+// Cadastro feito pelo admin (aluno sem conta Google): nome e telefone obrigatórios, e-mail opcional.
+export type DadosAluno = { nome: string; telefone: string; email: string | null };
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function validateDadosAluno(raw: { nome: string; telefone: string; email: string }):
+  { data: DadosAluno } | { error: string } {
+  const base = validateMember({ nome: raw.nome, telefone: raw.telefone });
+  if ("errors" in base) return { error: base.errors.nome ?? base.errors.telefone ?? "Dados inválidos." };
+  const email = raw.email.trim().toLowerCase();
+  if (email && (email.length > 254 || !EMAIL_RE.test(email))) return { error: "E-mail inválido." };
+  return { data: { ...base.data, email: email || null } };
 }

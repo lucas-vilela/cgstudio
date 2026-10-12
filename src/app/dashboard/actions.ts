@@ -28,6 +28,8 @@ export async function saveMember(
     .eq("auth_user_id", user.id)
     .select("id");
 
+  if (error?.message?.includes("members_telefone_unique"))
+    return { ok: false, errors: { telefone: "Este telefone já está em uso por outro cadastro. Informe outro número." } };
   if (error || !data?.length)
     return { ok: false, message: "Não foi possível salvar. Tente novamente." };
 

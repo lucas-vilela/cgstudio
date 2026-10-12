@@ -26,6 +26,8 @@ export type AdminMember = {
   dias_para_vencer: number | null;
   situacao: Situacao;
   treino_ids: number[];
+  // false = cadastrado pelo admin, ainda sem conta Google ligada.
+  tem_login: boolean;
 };
 
 export type Vencimento = {
