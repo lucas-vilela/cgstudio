@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { GoogleCta } from "./google-cta";
+import { Clock } from "lucide-react";
 
 export function Hero() {
   return (
@@ -20,6 +21,7 @@ export function Hero() {
             href="#horarios"
             className="inline-flex h-12 items-center rounded-full border border-border px-7 text-[15px] font-semibold hover:border-foreground"
           >
+            <Clock aria-hidden className="mr-2 size-4" />
             Ver horários
           </a>
         </div>

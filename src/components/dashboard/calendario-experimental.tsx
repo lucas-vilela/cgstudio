@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Loader2 } from "lucide-react";
+import { ArrowLeft, CalendarPlus, Loader2 } from "lucide-react";
 import {
   dataComDia,
   dataCurta,
@@ -127,6 +127,7 @@ export function CalendarioExperimental({ slots, experimental, hoje, acoes }: Pro
           Escolha um horário e um dia para fazer uma aula experimental, sem custo. É uma por pessoa.
         </p>
         <Button className="h-11 w-full sm:w-fit sm:px-6" onClick={() => setAberto(true)} disabled={slots.length === 0}>
+          <CalendarPlus data-icon="inline-start" />
           Agendar aula grátis
         </Button>
       </div>
@@ -218,6 +219,7 @@ export function CalendarioExperimental({ slots, experimental, hoje, acoes }: Pro
           )}
         </Button>
         <Button variant="outline" className="h-11" disabled={isPending} onClick={() => setAberto(false)}>
+          <ArrowLeft data-icon="inline-start" />
           Voltar
         </Button>
       </div>

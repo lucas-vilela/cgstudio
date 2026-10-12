@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FieldSelect } from "./field-select";
+import { Banknote } from "lucide-react";
 
 export type PaymentTarget = { id: string; nome: string | null; valor: number | null };
 
@@ -112,6 +113,7 @@ export function RegisterPaymentButton({
     <>
       <Button size="sm" variant={variant} onClick={() => setOpen(true)}
         className="min-h-11 md:min-h-7" aria-label={`${label}: ${member.nome ?? "aluno"}`}>
+        <Banknote data-icon="inline-start" />
         {label}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>

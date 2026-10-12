@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { CalendarDays, ShieldCheck, Users, Wallet } from "lucide-react";
 
 const ITEMS = [
-  { href: "/dashboard/admin", label: "Alunos" },
-  { href: "/dashboard/admin/financeiro", label: "Financeiro" },
-  { href: "/dashboard/admin/calendario", label: "Calendário" },
-  { href: "/dashboard/admin/admins", label: "Admins" },
+  { href: "/dashboard/admin", label: "Alunos", icon: Users },
+  { href: "/dashboard/admin/financeiro", label: "Financeiro", icon: Wallet },
+  { href: "/dashboard/admin/calendario", label: "Calendário", icon: CalendarDays },
+  { href: "/dashboard/admin/admins", label: "Admins", icon: ShieldCheck },
 ];
 
 export function AdminNav() {
@@ -24,12 +25,13 @@ export function AdminNav() {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring md:min-h-9",
+                  "inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring md:min-h-9",
                   active
                     ? "border-foreground bg-foreground text-background"
                     : "border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground",
                 )}
               >
+                <item.icon aria-hidden className="size-4" />
                 {item.label}
               </Link>
             </li>

@@ -18,6 +18,7 @@ import { FieldSelect } from "./field-select";
 import { RegisterPaymentButton } from "./register-payment-dialog";
 import { EmptyNote } from "./section";
 import { Tag } from "./tag";
+import { Pencil } from "lucide-react";
 
 const NO_PLAN = "none";
 
@@ -114,6 +115,7 @@ export function MembersTable({ members, plans }: { members: AdminMember[]; plans
     <div className="flex flex-wrap justify-end gap-2">
       <Button size="sm" variant="outline" onClick={() => setEditing(m)} className="min-h-11 md:min-h-7"
         aria-label={`Editar ${m.nome ?? "aluno"}`}>
+        <Pencil data-icon="inline-start" />
         Editar
       </Button>
       <RegisterPaymentButton member={{ id: m.member_id, nome: m.nome, valor: m.valor }} label="Registrar" />

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AdminNav } from "@/components/dashboard/admin/admin-nav";
+import { UserRound } from "lucide-react";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -7,7 +8,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <header className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-3">
           <p className="cg-label">Painel do admin</p>
-          <Link href="/dashboard" className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+          <Link href="/dashboard" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+            <UserRound aria-hidden className="size-4" />
             Meu cadastro
           </Link>
         </div>

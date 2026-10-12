@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { EmptyNote, Panel } from "./section";
 import { Tag } from "./tag";
+import { UserMinus, UserPlus } from "lucide-react";
 
 function Person({ u }: { u: AdminUser }) {
   return (
@@ -70,6 +71,7 @@ export function AdminsManager({
                       title={self ? "Você não pode rebaixar a si mesmo" : undefined}
                       onClick={() => change(a.user_id, "member")} className="min-h-11 md:min-h-7"
                       aria-label={`Rebaixar ${a.nome ?? a.email ?? "admin"}`}>
+                      <UserMinus data-icon="inline-start" />
                       Rebaixar
                     </Button>
                   </div>
@@ -95,6 +97,7 @@ export function AdminsManager({
                   <Person u={c} />
                   <Button size="sm" disabled={busy === c.user_id} onClick={() => change(c.user_id, "admin")}
                     className="min-h-11 shrink-0 md:min-h-7" aria-label={`Promover ${c.nome ?? c.email} a admin`}>
+                    <UserPlus data-icon="inline-start" />
                     Promover
                   </Button>
                 </li>

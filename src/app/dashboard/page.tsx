@@ -11,6 +11,7 @@ import { hojeSaoPaulo } from "./calendario-lib";
 import { getCurrentUser, getOwnMember, isAdmin } from "./data";
 import { STATUSES } from "./members";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { LayoutDashboard } from "lucide-react";
 
 export default function DashboardPage() {
   // Dados dependem da sessão (cookies): precisam ficar dentro de Suspense.
@@ -53,6 +54,7 @@ async function DashboardContent() {
           <SignOutButton />
           {admin && (
             <Link href="/dashboard/admin" className={buttonVariants({ variant: "outline" })}>
+              <LayoutDashboard data-icon="inline-start" />
               Painel admin
             </Link>
           )}

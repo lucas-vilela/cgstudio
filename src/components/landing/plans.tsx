@@ -1,4 +1,5 @@
 import { SectionTitle } from "./section-title";
+import { CalendarCheck } from "lucide-react";
 
 // Valores fictícios (especificacao-v1.md) — trocar pelos reais.
 const plans = [
@@ -17,7 +18,10 @@ export function Plans() {
         <ul className="grid gap-4 md:grid-cols-3">
           {plans.map((p) => (
             <li key={p.name} className="rounded-[20px] border border-border bg-surface p-7">
-              <h3 className="text-4xl">{p.name}</h3>
+              <h3 className="flex items-center gap-2 text-4xl">
+                <CalendarCheck aria-hidden className="size-6 text-accent" />
+                {p.name}
+              </h3>
               <p className="mt-1 text-muted-foreground">{p.note}</p>
               <p className="mt-6 flex items-baseline gap-1">
                 <span className="text-sm text-muted-foreground">R$</span>

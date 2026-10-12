@@ -1,5 +1,6 @@
 import { SectionTitle } from "./section-title";
 import { GoogleCta } from "./google-cta";
+import { AtSign, MessageCircle } from "lucide-react";
 
 export function Footer() {
   return (
@@ -13,6 +14,7 @@ export function Footer() {
             href="https://wa.me/5553984573198"
             className="block rounded-[20px] border border-border bg-surface p-6 hover:border-accent"
           >
+            <MessageCircle aria-hidden className="mb-3 size-6 text-accent" />
             <span className="font-display text-3xl font-bold">(53) 98457-3198</span>
             <span className="mt-1 block text-muted-foreground">WhatsApp</span>
           </a>
@@ -20,6 +22,7 @@ export function Footer() {
             href="https://instagram.com/studioclaricegeiger"
             className="block rounded-[20px] border border-border bg-surface p-6 hover:border-accent"
           >
+            <AtSign aria-hidden className="mb-3 size-6 text-accent" />
             <span className="font-display text-3xl font-bold">@studioclaricegeiger</span>
             <span className="mt-1 block text-muted-foreground">Instagram</span>
           </a>

@@ -1,4 +1,5 @@
 import { SectionTitle } from "./section-title";
+import { CalendarDays } from "lucide-react";
 
 // Horários ilustrativos — o calendário real fica no painel do aluno.
 const rows = [
@@ -16,7 +17,10 @@ export function Schedule() {
         <dl className="rounded-[20px] border border-border bg-surface px-6">
           {rows.map(([d, h]) => (
             <div key={d} className="flex items-baseline justify-between gap-4 border-b border-border py-5 last:border-0">
-              <dt className="text-muted-foreground">{d}</dt>
+              <dt className="flex items-center gap-2 text-muted-foreground">
+                <CalendarDays aria-hidden className="size-4" />
+                {d}
+              </dt>
               <dd className="text-lg font-semibold">{h}</dd>
             </div>
           ))}

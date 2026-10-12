@@ -6,6 +6,7 @@ import { formatPhone, type Member } from "@/app/dashboard/members";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Loader2, Save } from "lucide-react";
 
 const initial: SaveState = { ok: false };
 
@@ -66,6 +67,7 @@ export function MemberForm({ member }: { member: Member | null }) {
         </CardContent>
         <CardFooter className="gap-3">
           <Button type="submit" disabled={pending}>
+            {pending ? <Loader2 data-icon="inline-start" className="animate-spin" /> : <Save data-icon="inline-start" />}
             {pending ? "Salvando…" : "Salvar alterações"}
           </Button>
           {state.message && (

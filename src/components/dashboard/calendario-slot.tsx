@@ -1,4 +1,4 @@
-import { Loader2 } from "lucide-react";
+import { Loader2, LogIn, LogOut } from "lucide-react";
 import { faixa, type SlotVaga } from "@/app/dashboard/calendario-lib";
 import { Button } from "@/components/ui/button";
 import { Halter } from "./calendario-halter";
@@ -71,7 +71,9 @@ export function CalendarioSlot({ slot, meu, gratisEm, podeEntrar, semBotaoEntrar
               <Loader2 className="animate-spin" /> Saindo…
             </>
           ) : (
-            "Sair"
+            <>
+              <LogOut /> Sair
+            </>
           )}
         </Button>
       ) : !desfoque && podeEntrar ? (
@@ -81,12 +83,14 @@ export function CalendarioSlot({ slot, meu, gratisEm, podeEntrar, semBotaoEntrar
               <Loader2 className="animate-spin" /> Entrando…
             </>
           ) : (
-            "Entrar"
+            <>
+              <LogIn /> Entrar
+            </>
           )}
         </Button>
       ) : !desfoque && !semBotaoEntrar ? (
         <Button className="h-11 md:h-9" disabled aria-disabled>
-          Entrar
+          <LogIn /> Entrar
         </Button>
       ) : null}
     </div>

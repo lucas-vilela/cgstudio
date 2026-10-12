@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { FieldSelect } from "./field-select";
 import { EmptyNote } from "./section";
 import { Tag } from "./tag";
+import { Pencil, Plus, Power, PowerOff, UserMinus, Users } from "lucide-react";
 
 const DAY_OPTIONS = DIAS.map((label, i) => ({ value: String(i), label }));
 const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
@@ -106,6 +107,7 @@ function SlotAlunos({ slot, onClose }: { slot: SlotRow; onClose: () => void }) {
               </div>
               <Button size="sm" variant="outline" disabled={pending} onClick={() => remove(a.member_id)}
                 className="min-h-11 md:min-h-7" aria-label={`Remover ${a.nome ?? "aluno"} do horário`}>
+                <UserMinus data-icon="inline-start" />
                 Remover
               </Button>
             </li>
@@ -145,9 +147,10 @@ function SlotCard({ slot, onEdit, onAlunos }: { slot: SlotRow; onEdit: () => voi
         <div className="h-full bg-foreground" style={{ width: `${pct}%` }} />
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
-        <Button size="sm" variant="outline" onClick={onAlunos} className="min-h-11 md:min-h-7">Alunos</Button>
-        <Button size="sm" variant="outline" onClick={onEdit} className="min-h-11 md:min-h-7">Editar</Button>
+        <Button size="sm" variant="outline" onClick={onAlunos} className="min-h-11 md:min-h-7"><Users data-icon="inline-start" />Alunos</Button>
+        <Button size="sm" variant="outline" onClick={onEdit} className="min-h-11 md:min-h-7"><Pencil data-icon="inline-start" />Editar</Button>
         <Button size="sm" variant="ghost" disabled={pending} onClick={toggle} className="min-h-11 md:min-h-7">
+          {slot.ativo ? <PowerOff data-icon="inline-start" /> : <Power data-icon="inline-start" />}
           {slot.ativo ? "Desativar" : "Ativar"}
         </Button>
       </div>
@@ -168,7 +171,7 @@ export function SlotsBoard({ slots }: { slots: SlotRow[] }) {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex justify-end">
-        <Button onClick={() => setForm({ id: null })} className="min-h-11 md:min-h-8">Novo horário</Button>
+        <Button onClick={() => setForm({ id: null })} className="min-h-11 md:min-h-8"><Plus data-icon="inline-start" />Novo horário</Button>
       </div>
       {days.map((d) => {
         const list = slots.filter((s) => s.dia_semana === d);
