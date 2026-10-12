@@ -272,7 +272,7 @@ export function MembersTable({
                 <TableCell>
                   {nomeCell(m)}
                   <div className="text-xs text-muted-foreground">
-                    {m.email}{m.telefone ? ` · ${formatPhone(m.telefone)}` : ""}
+                    {[m.email, m.telefone && formatPhone(m.telefone)].filter(Boolean).join(" · ")}
                   </div>
                   {treinoTags(m)}
                 </TableCell>

@@ -11,32 +11,91 @@ const refresh = () => revalidatePath("/dashboard/admin", "layout");
 
 // ---------------------------------------------------------------- planos
 
-export async function updatePlano(input: {
-  id: number;
+type PlanoInput = {
+  nome: string;
+  vezesSemana: number;
   valorPadrao: number;
   descricao: string;
   exibirNaHome: boolean;
-}): Promise<Result> {
+};
+
+function validatePlano(i: PlanoInput) {
+  const nome = i.nome.trim();
+  if (!nome || nome.length > 30) return "Informe o nome do plano (até 30 caracteres).";
+  if (!Number.isInteger(i.vezesSemana) || i.vezesSemana < 1 || i.vezesSemana > 7)
+    return "Aulas por semana deve ser de 1 a 7.";
+  if (!Number.isFinite(i.valorPadrao) || i.valorPadrao < 0 || i.valorPadrao > 100000) return "Valor inválido.";
+  if (i.descricao.trim().length > 120) return "Descrição muito longa (máx. 120).";
+  return null;
+}
+
+const planoRow = (i: PlanoInput) => ({
+  nome: i.nome.trim(),
+  vezes_semana: i.vezesSemana,
+  valor_padrao: Math.round(i.valorPadrao * 100) / 100,
+  descricao: i.descricao.trim() || null,
+  exibir_na_home: !!i.exibirNaHome,
+});
+
+export async function createPlano(input: PlanoInput): Promise<Result> {
   const a = await admin();
   if ("error" in a) return fail(a.error);
-  if (!Number.isFinite(input.valorPadrao) || input.valorPadrao < 0 || input.valorPadrao > 100000)
-    return fail("Valor inválido.");
-  const descricao = input.descricao.trim();
-  if (descricao.length > 120) return fail("Descrição muito longa (máx. 120).");
+  const invalid = validatePlano(input);
+  if (invalid) return fail(invalid);
+  const { error } = await a.supabase.from("plans").insert(planoRow(input));
+  if (error) return fail(friendlyError(error, "Não foi possível criar o plano."));
+  updateTag(CMS_TAGS.planos);
+  refresh();
+  return done();
+}
 
+export async function updatePlano(input: PlanoInput & { id: number }): Promise<Result> {
+  const a = await admin();
+  if ("error" in a) return fail(a.error);
+  const invalid = validatePlano(input);
+  if (invalid) return fail(invalid);
   const { data, error } = await a.supabase
     .from("plans")
-    .update({
-      valor_padrao: Math.round(input.valorPadrao * 100) / 100,
-      descricao: descricao || null,
-      exibir_na_home: !!input.exibirNaHome,
-    })
+    .update(planoRow(input))
     .eq("id", input.id)
     .select("id");
   if (error || !data?.length) return fail(friendlyError(error, "Não foi possível salvar o plano."));
   updateTag(CMS_TAGS.planos);
   refresh();
   return done();
+}
+
+// Plano em uso não é excluído: devolve quem usa (até 10 nomes + total) para a tela listar.
+// A FK members.plan_id (on delete restrict) garante a regra no banco mesmo numa corrida.
+export async function deletePlano(
+  id: number,
+): Promise<Result<{ excluido: true } | { excluido: false; alunos: string[]; total: number }>> {
+  const a = await admin();
+  if ("error" in a) return fail(a.error);
+
+  const { data: alunos, count, error: usoError } = await a.supabase
+    .from("members")
+    .select("nome,email,telefone", { count: "exact" })
+    .eq("plan_id", id)
+    .order("nome")
+    .limit(10);
+  if (usoError) return fail(friendlyError(usoError, "Não foi possível verificar o plano."));
+  if (count) {
+    return {
+      ok: true,
+      data: {
+        excluido: false,
+        total: count,
+        alunos: (alunos ?? []).map((m) => m.nome ?? m.email ?? m.telefone ?? "Aluno sem nome"),
+      },
+    };
+  }
+
+  const { data, error } = await a.supabase.from("plans").delete().eq("id", id).select("id");
+  if (error || !data?.length) return fail(friendlyError(error, "Não foi possível excluir o plano."));
+  updateTag(CMS_TAGS.planos);
+  refresh();
+  return { ok: true, data: { excluido: true } };
 }
 
 // ---------------------------------------------------------------- treinos
