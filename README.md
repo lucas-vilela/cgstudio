@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Skills Vault
 
-## Getting Started
+Catálogo de skills para IA (curadoria da [NoCode StartUp](https://skills-nocode-startup.lovable.app/)), com busca e filtro por categoria.
 
-First, run the development server:
+**Stack:** Next.js 16 (App Router, Cache Components) · Supabase (Postgres + RLS) · shadcn/ui · Tailwind v4
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Setup
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1. Crie um projeto em [supabase.com](https://supabase.com).
+2. No **SQL Editor**, rode o conteúdo de [`supabase/migrations/0001_skills.sql`](supabase/migrations/0001_skills.sql). Ele cria a tabela `skills`, habilita RLS com leitura pública e insere as 31 entradas.
+3. Copie as credenciais (Project Settings → API):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+   ```bash
+   cp .env.example .env.local
+   # preencha NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Rode:
 
-## Learn More
+   ```bash
+   npm install
+   npm run dev
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+## Estrutura
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Arquivo | Papel |
+| --- | --- |
+| `supabase/migrations/0001_skills.sql` | Schema, política RLS e seed |
+| `src/lib/supabase.ts` | Client anônimo + tipo `Skill` |
+| `src/lib/skills.ts` | `getSkills()` com `use cache` (perfil `hours`) |
+| `src/components/skills-explorer.tsx` | Busca + abas de categoria (client) |
+| `src/app/page.tsx` | Página principal (server) |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Categorias mapeadas
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Repositórios (4) · Gerais (5) · Automação (3) · Web Design (3) · Imagem (2) · Vídeo (1) · Desenvolvimento (6) · Ferramentas (3) · Escrita (2) · Áreas (2)
