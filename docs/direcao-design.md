@@ -72,7 +72,7 @@ Ao implementar, copiar os usados para `public/brand/`. Gerar **favicon** a parti
 
 ## Acessibilidade
 
-- Contraste: branco e `#FF3420` sobre `#1E1E1E` passam; branco sobre `#FF3420` (botões) conferir em 14px+ semi-negrito.
+- Contraste: branco e `#FF3420` sobre `#1E1E1E` passam. **Decisão: texto dos botões vermelhos fica branco** (identidade da marca). Branco sobre `#FF3420` dá cerca de 3,65:1 (calculado): passa só como texto grande (WCAG AA 3:1), abaixo de 4,5:1 para texto normal. Risco aceito; manter o texto dos botões semi-negrito e a partir de 16px. Vermelho sobre `--surface` (`#272727`) dá cerca de 4,1:1: evitar texto pequeno vermelho dentro de cartões.
 - Foco visível em todos os controles (anel branco ou vermelho de 2px).
 - Respeitar `prefers-reduced-motion`. Estado não pode depender só de cor: usar texto ("Lotado", "Seu horário").
 - Alvos de toque de pelo menos 44px.
