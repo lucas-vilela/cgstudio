@@ -2,27 +2,15 @@
 
 import { revalidatePath, updateTag } from "next/cache";
 import { SLOTS_PUBLICOS_TAG } from "@/lib/slots";
-import { createClient, getUser } from "@/lib/supabase/server";
-import { isAdmin } from "../data";
+import { admin, fail, type Result } from "./action-utils";
 import { friendlyError } from "./errors";
 import { FORMAS } from "./types";
 
-export type Result<T = void> = { ok: true; data: T } | { ok: false; message: string };
+export type { Result } from "./action-utils";
 
-const fail = (message: string): { ok: false; message: string } => ({ ok: false, message });
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 const STATUS = ["ativo", "inativo", "pendente"];
-
-// Autorização no servidor: a RLS/RPC do banco também exigem admin (defesa em profundidade).
-async function admin(): Promise<
-  { error: string } | { supabase: Awaited<ReturnType<typeof createClient>>; user: { id: string } }
-> {
-  const user = await getUser();
-  if (!user) return { error: "Sessão expirada. Entre novamente." };
-  if (!(await isAdmin(user.id))) return { error: "Apenas administradores podem fazer isso." };
-  return { supabase: await createClient(), user };
-}
 
 const refresh = () => revalidatePath("/dashboard/admin", "layout");
 const refreshHome = () => updateTag(SLOTS_PUBLICOS_TAG);
@@ -59,11 +47,15 @@ export async function updateMember(input: {
   planId: number | null;
   valorAcordado: number | null;
   status: string;
+  // null = não mexer nos treinos (só envia quando o admin mudou a seleção).
+  treinoIds: number[] | null;
 }): Promise<Result> {
   const a = await admin();
   if ("error" in a) return fail(a.error);
   if (!STATUS.includes(input.status)) return fail("Status inválido.");
   if (input.valorAcordado != null && !(input.valorAcordado >= 0)) return fail("Valor inválido.");
+  if (input.treinoIds && !input.treinoIds.every((id) => Number.isInteger(id) && id > 0))
+    return fail("Treino inválido.");
 
   const { data, error } = await a.supabase
     .from("members")
@@ -71,7 +63,16 @@ export async function updateMember(input: {
     .eq("id", input.memberId)
     .select("id");
   if (error || !data?.length) return fail(friendlyError(error, "Não foi possível salvar."));
+
   refresh();
+  if (input.treinoIds) {
+    const { error: treinosError } = await a.supabase.rpc("set_member_treinos", {
+      p_member_id: input.memberId,
+      p_treino_ids: [...new Set(input.treinoIds)],
+    });
+    if (treinosError)
+      return fail(friendlyError(treinosError, "Plano e status salvos, mas não foi possível salvar os treinos."));
+  }
   return { ok: true, data: undefined };
 }
 

@@ -1,6 +1,17 @@
 import Link from "next/link";
-import { AdminNav } from "@/components/dashboard/admin/admin-nav";
+import { Suspense } from "react";
+import { connection } from "next/server";
 import { UserRound } from "lucide-react";
+import { AdminNav } from "@/components/dashboard/admin/admin-nav";
+import { getPendentesCount } from "./queries";
+
+// Contagem de depoimentos pendentes é dado de sessão: busca dentro de Suspense, com a barra
+// já visível (sem o número) enquanto carrega ou se a consulta falhar.
+async function AdminNavComContagem() {
+  await connection(); // só no request: o cliente do Supabase lê relógio/cookies
+  const pendentes = await getPendentesCount().catch(() => 0);
+  return <AdminNav pendentes={pendentes} />;
+}
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -13,7 +24,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             Meu cadastro
           </Link>
         </div>
-        <AdminNav />
+        <Suspense fallback={<AdminNav />}>
+          <AdminNavComContagem />
+        </Suspense>
       </header>
       {children}
     </main>

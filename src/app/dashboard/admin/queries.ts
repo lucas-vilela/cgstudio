@@ -6,8 +6,11 @@ import type {
   FinanceiroMes,
   Inadimplente,
   Pagamento,
+  DepoimentoAdmin,
   Plan,
+  SiteConfigRow,
   SlotRow,
+  Treino,
   Vencimento,
 } from "./types";
 
@@ -25,7 +28,10 @@ const one = <T>(v: T | T[] | null | undefined) => (Array.isArray(v) ? (v[0] ?? n
 export async function getPlans(): Promise<Plan[]> {
   const supabase = await createClient();
   const rows = check(
-    await supabase.from("plans").select("id,nome,vezes_semana,valor_padrao").order("vezes_semana"),
+    await supabase
+      .from("plans")
+      .select("id,nome,vezes_semana,valor_padrao,descricao,exibir_na_home")
+      .order("vezes_semana"),
     "plans",
   );
   return rows.map((p: Plan) => ({ ...p, valor_padrao: num(p.valor_padrao) }));
@@ -62,6 +68,26 @@ export async function getVencimentosProximos(): Promise<Vencimento[]> {
   return rows.map((r: Vencimento) => ({ ...r, valor: r.valor == null ? null : num(r.valor) }));
 }
 
+// Lê member_treinos em páginas: o PostgREST corta cada resposta no max-rows (1000), e uma lista
+// incompleta faria o "Salvar" do aluno apagar ligações que não vieram.
+async function getTodasLigacoesTreino(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const PAGINA = 1000;
+  const todas: { member_id: string; treino_id: number }[] = [];
+  for (let de = 0; ; de += PAGINA) {
+    const page = check(
+      await supabase
+        .from("member_treinos")
+        .select("member_id,treino_id")
+        .order("member_id")
+        .order("treino_id")
+        .range(de, de + PAGINA - 1),
+      "member_treinos",
+    ) as { member_id: string; treino_id: number }[];
+    todas.push(...page);
+    if (page.length < PAGINA) return todas;
+  }
+}
+
 export async function getAdminMembers(query: string): Promise<AdminMember[]> {
   const supabase = await createClient();
   let req = supabase.from("member_financeiro").select("*").order("nome").limit(500);
@@ -72,9 +98,10 @@ export async function getAdminMembers(query: string): Promise<AdminMember[]> {
     if (digits.length >= 3) parts.push(`telefone.ilike.%${digits}%`);
     req = req.or(parts.join(","));
   }
-  const [fin, acordados] = await Promise.all([
+  const [fin, acordados, ligacoes] = await Promise.all([
     req,
     supabase.from("members").select("id,valor_acordado").not("valor_acordado", "is", null),
+    getTodasLigacoesTreino(supabase),
   ]);
   const rows = check(fin, "member_financeiro");
   const acordado = new Map<string, number>(
@@ -83,10 +110,15 @@ export async function getAdminMembers(query: string): Promise<AdminMember[]> {
       num(m.valor_acordado),
     ]),
   );
+  const treinos = new Map<string, number[]>();
+  for (const l of ligacoes) {
+    treinos.set(l.member_id, [...(treinos.get(l.member_id) ?? []), l.treino_id]);
+  }
   return rows.map((r: AdminMember) => ({
     ...r,
     valor: r.valor == null ? null : num(r.valor),
     valor_acordado: acordado.get(r.member_id) ?? null,
+    treino_ids: treinos.get(r.member_id) ?? [],
   }));
 }
 
@@ -208,4 +240,68 @@ export async function getAdminsAndCandidates(): Promise<{
     .sort((a, b) => (a.nome ?? a.email ?? "").localeCompare(b.nome ?? b.email ?? ""));
   const candidatos = [...byUser.values()].filter((u) => !adminIds.has(u.user_id));
   return { admins, candidatos };
+}
+
+// ---------------------------------------------------------------- CMS da home
+
+export async function getTreinos(): Promise<Treino[]> {
+  const supabase = await createClient();
+  const rows = check(
+    await supabase
+      .from("treinos")
+      .select("id,nome,descricao,icone,ordem,ativo,member_treinos(count)")
+      .order("ordem")
+      .order("id"),
+    "treinos",
+  ) as (Omit<Treino, "qtd_alunos"> & { member_treinos: { count: number }[] })[];
+  return rows.map(({ member_treinos, ...t }) => ({ ...t, qtd_alunos: member_treinos[0]?.count ?? 0 }));
+}
+
+// Pendentes vêm todos (a contagem da navegação também conta todos); os demais, os 300 mais recentes.
+export async function getDepoimentosAdmin(): Promise<DepoimentoAdmin[]> {
+  const supabase = await createClient();
+  const cols = "id,texto,status,ajustado_pelo_admin,nome_exibicao,created_at,updated_at,members(nome,status)";
+  const [pendentes, demais] = await Promise.all([
+    supabase.from("depoimentos").select(cols).eq("status", "pendente").order("updated_at"),
+    supabase.from("depoimentos").select(cols).neq("status", "pendente")
+      .order("updated_at", { ascending: false }).limit(300),
+  ]);
+  const rows = [...check(pendentes, "depoimentos"), ...check(demais, "depoimentos")] as (Omit<DepoimentoAdmin, "aluno_nome" | "aluno_status"> & {
+    members: { nome: string | null; status: DepoimentoAdmin["aluno_status"] } | { nome: string | null; status: DepoimentoAdmin["aluno_status"] }[] | null;
+  })[];
+  return rows.map(({ members, ...d }) => ({
+    ...d,
+    aluno_nome: one(members)?.nome ?? null,
+    aluno_status: one(members)?.status ?? null,
+  }));
+}
+
+export async function getPendentesCount(): Promise<number> {
+  const supabase = await createClient();
+  const res = await supabase
+    .from("depoimentos")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "pendente");
+  if (res.error) throw new Error(`depoimentos: ${res.error.message}`);
+  return res.count ?? 0;
+}
+
+export async function getSiteConfigAdmin(): Promise<SiteConfigRow> {
+  const supabase = await createClient();
+  const row = check<SiteConfigRow | null>(
+    await supabase
+      .from("site_config")
+      .select(
+        "whatsapp,instagram,hero_titulo,hero_destaque,hero_subtitulo,nota_modalidades,nota_planos,nota_horarios,nota_contato,meta_descricao",
+      )
+      .eq("id", 1)
+      .maybeSingle(),
+    "site_config",
+  );
+  return (
+    row ?? {
+      whatsapp: null, instagram: null, hero_titulo: null, hero_destaque: null, hero_subtitulo: null,
+      nota_modalidades: null, nota_planos: null, nota_horarios: null, nota_contato: null, meta_descricao: null,
+    }
+  );
 }

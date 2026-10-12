@@ -3,6 +3,7 @@ import { Hero } from "@/components/landing/hero";
 import { Modalities } from "@/components/landing/modalities";
 import { Plans } from "@/components/landing/plans";
 import { Schedule } from "@/components/landing/schedule";
+import { Depoimentos } from "@/components/landing/depoimentos";
 import { Footer } from "@/components/landing/footer";
 
 export default function Home() {
@@ -13,6 +14,7 @@ export default function Home() {
         <Hero />
         <Modalities />
         <Plans />
+        <Depoimentos />
         <Schedule />
       </main>
       <Footer />

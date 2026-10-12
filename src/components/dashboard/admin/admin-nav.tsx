@@ -3,16 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { CalendarDays, ShieldCheck, Users, Wallet } from "lucide-react";
+import { CalendarDays, LayoutTemplate, ShieldCheck, Users, Wallet } from "lucide-react";
 
 const ITEMS = [
   { href: "/dashboard/admin", label: "Alunos", icon: Users },
   { href: "/dashboard/admin/financeiro", label: "Financeiro", icon: Wallet },
   { href: "/dashboard/admin/calendario", label: "Calendário", icon: CalendarDays },
+  { href: "/dashboard/admin/conteudo", label: "Conteúdo", icon: LayoutTemplate },
   { href: "/dashboard/admin/admins", label: "Admins", icon: ShieldCheck },
 ];
 
-export function AdminNav() {
+export function AdminNav({ pendentes = 0 }: { pendentes?: number }) {
   const pathname = usePathname();
   return (
     <nav aria-label="Painel do admin" className="-mx-4 overflow-x-auto px-4">
@@ -33,6 +34,14 @@ export function AdminNav() {
               >
                 <item.icon aria-hidden className="size-4" />
                 {item.label}
+                {item.href.endsWith("/conteudo") && pendentes > 0 && (
+                  <span
+                    className="grid min-w-5 place-items-center rounded-full bg-accent px-1.5 text-xs font-bold leading-5 text-accent-foreground"
+                    aria-label={`${pendentes} ${pendentes === 1 ? "depoimento" : "depoimentos"} para aprovar`}
+                  >
+                    {pendentes}
+                  </span>
+                )}
               </Link>
             </li>
           );

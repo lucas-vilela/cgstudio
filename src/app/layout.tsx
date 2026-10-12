@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Lobster_Two } from "next/font/google";
+import { getSiteConfig } from "@/lib/cms";
 import "./globals.css";
 
 const inter = Inter({
@@ -14,11 +15,10 @@ const lobster = Lobster_Two({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "CG Studio",
-  description:
-    "CG Studio: studio de movimento com turmas pequenas e atenção ao seu movimento. Conheça modalidades, planos e horários.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { meta_descricao } = await getSiteConfig();
+  return { title: "CG Studio", description: meta_descricao };
+}
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

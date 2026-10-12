@@ -6,7 +6,7 @@ import { SummaryCards } from "@/components/dashboard/admin/summary-cards";
 import { VencimentosProximos } from "@/components/dashboard/admin/vencimentos-proximos";
 import { MembersSearch } from "@/components/dashboard/members-search";
 import { requireAdmin } from "./guard";
-import { getAdminMembers, getPlans, getResumo, getVencimentosProximos } from "./queries";
+import { getAdminMembers, getPlans, getResumo, getTreinos, getVencimentosProximos } from "./queries";
 
 type SearchParams = Promise<{ q?: string | string[] }>;
 
@@ -24,11 +24,12 @@ async function AdminContent({ searchParams }: { searchParams: SearchParams }) {
   const { q } = await searchParams;
   const query = Array.isArray(q) ? (q[0] ?? "") : (q ?? "");
 
-  const [resumo, vencimentos, members, plans] = await Promise.all([
+  const [resumo, vencimentos, members, plans, treinos] = await Promise.all([
     getResumo(),
     getVencimentosProximos(),
     getAdminMembers(query),
     getPlans(),
+    getTreinos(),
   ]);
 
   return (
@@ -47,7 +48,7 @@ async function AdminContent({ searchParams }: { searchParams: SearchParams }) {
           </div>
           <MembersSearch defaultValue={query} />
         </div>
-        <MembersTable members={members} plans={plans} />
+        <MembersTable members={members} plans={plans} treinos={treinos} />
       </Panel>
     </div>
   );

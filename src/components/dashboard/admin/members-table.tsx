@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { updateMember } from "@/app/dashboard/admin/actions";
 import { brl, diasLabel, formatDate, moneyInput, parseMoney } from "@/app/dashboard/admin/format";
-import type { AdminMember, Plan } from "@/app/dashboard/admin/types";
+import type { AdminMember, Plan, Treino } from "@/app/dashboard/admin/types";
 import { formatPhone, statusLabel, STATUSES } from "@/app/dashboard/members";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +22,9 @@ import { Pencil } from "lucide-react";
 
 const NO_PLAN = "none";
 
+const mesmosTreinos = (a: number[], b: number[]) =>
+  a.length === b.length && a.every((id) => b.includes(id));
+
 function VencimentoCell({ m }: { m: AdminMember }) {
   if (!m.vencimento) return <span className="text-muted-foreground">Sem vencimento</span>;
   const dias = m.dias_para_vencer ?? 0;
@@ -39,10 +42,13 @@ function VencimentoCell({ m }: { m: AdminMember }) {
   );
 }
 
-function EditForm({ member, plans, onClose }: { member: AdminMember; plans: Plan[]; onClose: () => void }) {
+function EditForm({
+  member, plans, treinos, onClose,
+}: { member: AdminMember; plans: Plan[]; treinos: Treino[]; onClose: () => void }) {
   const [planId, setPlanId] = useState(member.plan_id ? String(member.plan_id) : NO_PLAN);
   const [valor, setValor] = useState(moneyInput(member.valor_acordado));
   const [status, setStatus] = useState<string>(member.status);
+  const [treinoIds, setTreinoIds] = useState<number[]>(member.treino_ids);
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
   const padrao = plans.find((p) => String(p.id) === planId)?.valor_padrao ?? null;
@@ -58,6 +64,7 @@ function EditForm({ member, plans, onClose }: { member: AdminMember; plans: Plan
         planId: planId === NO_PLAN ? null : Number(planId),
         valorAcordado: parsed,
         status,
+        treinoIds: mesmosTreinos(treinoIds, member.treino_ids) ? null : treinoIds,
       });
       if (res.ok) onClose();
       else setError(res.message);
@@ -89,6 +96,29 @@ function EditForm({ member, plans, onClose }: { member: AdminMember; plans: Plan
         <Label htmlFor="ed-status">Status</Label>
         <FieldSelect id="ed-status" value={status} onValueChange={setStatus} options={[...STATUSES]} />
       </div>
+      <fieldset className="grid gap-1.5">
+        <legend className="mb-1 text-sm font-medium">Tipos de treino</legend>
+        {treinos.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Nenhum tipo de treino cadastrado.</p>
+        ) : (
+          <div className="grid gap-1.5 sm:grid-cols-2">
+            {treinos.map((t) => (
+              <label key={t.id} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-border px-3 text-sm md:min-h-9">
+                <input
+                  type="checkbox"
+                  className="size-4 accent-[var(--accent)]"
+                  checked={treinoIds.includes(t.id)}
+                  onChange={(e) =>
+                    setTreinoIds((cur) => (e.target.checked ? [...cur, t.id] : cur.filter((x) => x !== t.id)))
+                  }
+                />
+                <span className="truncate">{t.nome}{t.ativo ? "" : " (inativo)"}</span>
+              </label>
+            ))}
+          </div>
+        )}
+        <p className="text-xs text-muted-foreground">Só a recepção vê isto; o aluno não.</p>
+      </fieldset>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onClose} className="min-h-11 md:min-h-8">Cancelar</Button>
@@ -100,7 +130,9 @@ function EditForm({ member, plans, onClose }: { member: AdminMember; plans: Plan
   );
 }
 
-export function MembersTable({ members, plans }: { members: AdminMember[]; plans: Plan[] }) {
+export function MembersTable({
+  members, plans, treinos,
+}: { members: AdminMember[]; plans: Plan[]; treinos: Treino[] }) {
   const [editing, setEditing] = useState<AdminMember | null>(null);
 
   if (!members.length) return <EmptyNote>Nenhum aluno encontrado.</EmptyNote>;
@@ -111,6 +143,17 @@ export function MembersTable({ members, plans }: { members: AdminMember[]; plans
       {m.valor_acordado != null && <span className="text-xs text-muted-foreground">acordado</span>}
     </div>
   );
+  const nomesTreino = new Map(treinos.map((t) => [t.id, t.nome]));
+  const treinoTags = (m: AdminMember) =>
+    m.treino_ids.length > 0 && (
+      <div className="mt-1 flex flex-wrap gap-1">
+        {m.treino_ids.map((id) => (
+          <Tag key={id} className="px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+            {nomesTreino.get(id) ?? "Treino"}
+          </Tag>
+        ))}
+      </div>
+    );
   const actions = (m: AdminMember) => (
     <div className="flex flex-wrap justify-end gap-2">
       <Button size="sm" variant="outline" onClick={() => setEditing(m)} className="min-h-11 md:min-h-7"
@@ -145,6 +188,7 @@ export function MembersTable({ members, plans }: { members: AdminMember[]; plans
                   <div className="text-xs text-muted-foreground">
                     {m.email}{m.telefone ? ` · ${formatPhone(m.telefone)}` : ""}
                   </div>
+                  {treinoTags(m)}
                 </TableCell>
                 <TableCell>
                   {m.plano_nome ?? "—"}
@@ -172,6 +216,7 @@ export function MembersTable({ members, plans }: { members: AdminMember[]; plans
               <div className="min-w-0">
                 <p className="truncate font-medium">{m.nome ?? "—"}</p>
                 <p className="truncate text-xs text-muted-foreground">{m.email}</p>
+                {treinoTags(m)}
               </div>
               <Tag>{statusLabel(m.status)}</Tag>
             </div>
@@ -188,7 +233,7 @@ export function MembersTable({ members, plans }: { members: AdminMember[]; plans
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
         <DialogContent>
           {editing && (
-            <EditForm key={editing.member_id} member={editing} plans={plans} onClose={() => setEditing(null)} />
+            <EditForm key={editing.member_id} member={editing} plans={plans} treinos={treinos} onClose={() => setEditing(null)} />
           )}
         </DialogContent>
       </Dialog>

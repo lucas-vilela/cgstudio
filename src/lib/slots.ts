@@ -8,6 +8,16 @@ export type SlotPublico = { dia_semana: number; hora_inicio: string; hora_fim: s
 // Horários ativos para a home (visitante sem login). Só dia/hora: a política `slots read public`
 // e o grant por coluna do papel anon (migration 0005) não expõem capacidade nem vagas.
 export async function getSlotsPublicos(): Promise<SlotPublico[]> {
+  try {
+    return await buscarSlots();
+  } catch (e) {
+    // A falha dos horários não derruba a home; a seção mostra o aviso de "em breve".
+    console.error("[slots] falha ao carregar horários:", e);
+    return [];
+  }
+}
+
+async function buscarSlots(): Promise<SlotPublico[]> {
   "use cache";
   cacheLife("minutes");
   cacheTag(SLOTS_PUBLICOS_TAG);

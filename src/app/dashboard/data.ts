@@ -42,3 +42,19 @@ export async function listMembers(query: string) {
   const { data } = await req;
   return (data ?? []) as Member[];
 }
+
+export type OwnDepoimento = {
+  texto: string;
+  status: "pendente" | "aprovado" | "recusado" | "oculto";
+  ajustado_pelo_admin: boolean;
+};
+
+export async function getOwnDepoimento(memberId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("depoimentos")
+    .select("texto,status,ajustado_pelo_admin")
+    .eq("member_id", memberId)
+    .maybeSingle();
+  return data as OwnDepoimento | null;
+}

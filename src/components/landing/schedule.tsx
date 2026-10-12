@@ -1,5 +1,6 @@
 import { CalendarDays } from "lucide-react";
 import { DIAS, hhmm } from "@/app/dashboard/admin/format";
+import { getSiteConfig } from "@/lib/cms";
 import { getSlotsPublicos } from "@/lib/slots";
 import { SectionTitle } from "./section-title";
 
@@ -7,7 +8,7 @@ import { SectionTitle } from "./section-title";
 const ORDEM = [1, 2, 3, 4, 5, 6, 0];
 
 export async function Schedule() {
-  const slots = await getSlotsPublicos();
+  const [slots, c] = await Promise.all([getSlotsPublicos(), getSiteConfig()]);
   const porDia = ORDEM.map((d) => ({
     dia: d,
     faixas: slots.filter((s) => s.dia_semana === d),
@@ -16,7 +17,7 @@ export async function Schedule() {
   return (
     <section id="horarios" className="border-t border-border py-16 md:py-20">
       <div className="mx-auto max-w-6xl px-4">
-        <SectionTitle label="Horários" note="Turmas fixas, com poucas pessoas por horário. Entre com sua conta Google para ver as vagas e escolher os seus horários.">
+        <SectionTitle label="Horários" note={c.nota_horarios}>
           Horários que cabem na semana
         </SectionTitle>
         {porDia.length === 0 ? (

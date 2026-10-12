@@ -9,6 +9,10 @@ const MESSAGES: Record<string, string> = {
   usuario_nao_encontrado: "Usuário não encontrado.",
   nao_pode_rebaixar_a_si_mesmo: "Você não pode rebaixar a si mesmo.",
   ultimo_admin: "Não é possível rebaixar o último admin.",
+  treino_minimo: "É preciso manter pelo menos um tipo de treino ativo.",
+  aluno_nao_ativo: "Só alunos com matrícula ativa podem enviar depoimento.",
+  aluno_sem_nome: "Complete seu nome no cadastro antes de enviar um depoimento.",
+  texto_invalido: "O depoimento deve ter entre 10 e 500 caracteres.",
 };
 
 export function friendlyError(

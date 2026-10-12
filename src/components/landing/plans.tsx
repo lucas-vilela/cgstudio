@@ -1,31 +1,31 @@
-import { SectionTitle } from "./section-title";
 import { CalendarCheck } from "lucide-react";
+import { getPlanosHome, getSiteConfig } from "@/lib/cms";
+import { SectionTitle } from "./section-title";
 
-// Valores fictícios (especificacao-v1.md) — trocar pelos reais.
-const plans = [
-  { name: "1x", price: "75", note: "1 aula por semana" },
-  { name: "2x", price: "80", note: "2 aulas por semana" },
-  { name: "3x", price: "100", note: "3 aulas por semana" },
-];
+const preco = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
-export function Plans() {
+export async function Plans() {
+  const [planos, c] = await Promise.all([getPlanosHome(), getSiteConfig()]);
+  if (planos.length === 0) return null;
   return (
     <section id="planos" className="border-t border-border py-16 md:py-20">
       <div className="mx-auto max-w-6xl px-4">
-        <SectionTitle label="Planos" note="Cobrança mensal, pela frequência semanal. Pagamento combinado direto com o studio.">
+        <SectionTitle label="Planos" note={c.nota_planos}>
           Escolha sua frequência
         </SectionTitle>
         <ul className="grid gap-4 md:grid-cols-3">
-          {plans.map((p) => (
-            <li key={p.name} className="rounded-[20px] border border-border bg-surface p-7">
+          {planos.map((p) => (
+            <li key={p.nome} className="rounded-[20px] border border-border bg-surface p-7">
               <h3 className="flex items-center gap-2 text-4xl">
                 <CalendarCheck aria-hidden className="size-6 text-accent" />
-                {p.name}
+                {p.nome}
               </h3>
-              <p className="mt-1 text-muted-foreground">{p.note}</p>
+              <p className="mt-1 text-muted-foreground">
+                {p.descricao ?? `${p.vezes_semana} ${p.vezes_semana === 1 ? "aula" : "aulas"} por semana`}
+              </p>
               <p className="mt-6 flex items-baseline gap-1">
                 <span className="text-sm text-muted-foreground">R$</span>
-                <span className="font-display text-6xl font-bold leading-none">{p.price}</span>
+                <span className="font-display text-6xl font-bold leading-none">{preco.format(p.valor_padrao)}</span>
                 <span className="text-sm text-muted-foreground">/mês</span>
               </p>
             </li>
