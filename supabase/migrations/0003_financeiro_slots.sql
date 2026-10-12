@@ -249,8 +249,10 @@ begin
 end;
 $$;
 
--- Registra pagamento (só admin): grava payment, vencimento = pago_em + 30 dias e status = ativo
+-- Registra pagamento (só admin): grava payment, atualiza vencimento e põe status = ativo
 -- (também tira o aluno de pendente/inativo; slots não são tocados).
+-- Vencimento: se o atual é >= pago_em (pagou adiantado/no dia), SOMA 30 dias ao atual;
+-- se é nulo ou já passou (< pago_em), novo vencimento = pago_em + 30.
 -- p_valor nulo => usa valor_acordado, senão o valor_padrao do plano.
 -- p_pago_em nulo => hoje. Retorna o novo vencimento.
 -- Erros: nao_autenticado, nao_admin (42501), aluno_nao_encontrado, forma_invalida, valor_invalido.
@@ -269,6 +271,7 @@ as $$
 declare
   v_uid   uuid := (select auth.uid());
   v_valor numeric(10,2);
+  v_atual date;
   v_pago  date := coalesce(p_pago_em, private.hoje());
   v_venc  date;
 begin
@@ -278,8 +281,8 @@ begin
     raise exception 'forma_invalida';
   end if;
 
-  select coalesce(p_valor, m.valor_acordado, pl.valor_padrao)
-    into v_valor
+  select coalesce(p_valor, m.valor_acordado, pl.valor_padrao), m.vencimento
+    into v_valor, v_atual
     from public.members m
     left join public.plans pl on pl.id = m.plan_id
    where m.id = p_member_id
@@ -287,7 +290,9 @@ begin
   if not found then raise exception 'aluno_nao_encontrado'; end if;
   if v_valor is null or v_valor <= 0 then raise exception 'valor_invalido'; end if;
 
-  v_venc := v_pago + 30;
+  v_venc := case when v_atual is not null and v_atual >= v_pago
+                 then v_atual + 30
+                 else v_pago + 30 end;
 
   insert into public.payments (member_id, valor, pago_em, forma, observacao, registrado_por)
   values (p_member_id, v_valor, v_pago, p_forma, p_observacao, v_uid);
@@ -295,6 +300,39 @@ begin
   update public.members set vencimento = v_venc, status = 'ativo' where id = p_member_id;
 
   return v_venc;
+end;
+$$;
+
+-- Cancela a PRÓPRIA aula experimental, só se a data ainda for futura (> hoje). Sem argumento
+-- cancela a do próprio aluno; com p_booking_id, só aceita se for dele. Após cancelar, o aluno
+-- pode agendar de novo (a unicidade de member_id vale só enquanto a linha existe). Se a data
+-- já passou a linha fica (experimental realizada) e book_trial segue dando experimental_ja_usada.
+-- Admin apaga a linha direto na tabela (RLS).
+-- Erros: nao_autenticado, aluno_nao_encontrado, experimental_inexistente, experimental_passada.
+create or replace function private.cancel_trial(p_booking_id bigint default null)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid    uuid := (select auth.uid());
+  v_member public.members%rowtype;
+  v_trial  public.trial_bookings%rowtype;
+begin
+  if v_uid is null then raise exception 'nao_autenticado'; end if;
+
+  select * into v_member from public.members where auth_user_id = v_uid for update;
+  if not found then raise exception 'aluno_nao_encontrado'; end if;
+
+  select * into v_trial from public.trial_bookings
+   where member_id = v_member.id
+     and (p_booking_id is null or id = p_booking_id)
+     for update;
+  if not found then raise exception 'experimental_inexistente'; end if;
+  if v_trial.data <= private.hoje() then raise exception 'experimental_passada'; end if;
+
+  delete from public.trial_bookings where id = v_trial.id;
 end;
 $$;
 
@@ -393,6 +431,10 @@ create or replace function public.register_payment(
 returns date language sql security invoker set search_path = ''
 as $$ select private.register_payment(p_member_id, p_forma, p_valor, p_pago_em, p_observacao); $$;
 
+create or replace function public.cancel_trial(p_booking_id bigint default null)
+returns void language sql security invoker set search_path = ''
+as $$ select private.cancel_trial(p_booking_id); $$;
+
 create or replace function public.set_user_role(p_user_id uuid, p_role text)
 returns void language sql security invoker set search_path = ''
 as $$ select private.set_user_role(p_user_id, p_role); $$;
@@ -408,6 +450,7 @@ begin
   foreach f in array array[
     'private.join_slot(bigint)', 'private.leave_slot(bigint)', 'private.book_trial(bigint,date)',
     'private.register_payment(uuid,text,numeric,date,text)', 'private.set_user_role(uuid,text)',
+    'private.cancel_trial(bigint)', 'public.cancel_trial(bigint)',
     'private.slot_vagas_na_data(bigint,date)', 'private.fn_slots_vagas()',
     'public.join_slot(bigint)', 'public.leave_slot(bigint)', 'public.book_trial(bigint,date)',
     'public.register_payment(uuid,text,numeric,date,text)', 'public.set_user_role(uuid,text)',
