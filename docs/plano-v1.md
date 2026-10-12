@@ -2,7 +2,14 @@
 
 Base: `docs/especificacao-v1.md`. Este plano cobre o que falta para fechar a v1, a partir do estado do código em 2026-10-12.
 
-## Estado atual
+## Andamento (2026-10-12)
+
+- **Fase 0 concluída:** migrations `0002`, `0003` e `0004` aplicadas no projeto `gaiidsvxchhtyjxocxye`; primeiro admin promovido; Google OAuth ativo; Site URL `https://cgstudio-pi.vercel.app` e Redirect URLs (localhost e `-pi`) configuradas.
+- **Fase 1 concluída:** regras do banco testadas por SQL (pagamento/vencimento, job diário, entrar/sair de slot, experimental, RLS, papéis). A corrida pela última vaga não foi provada (precisa de duas conexões).
+- **Fase 2 concluída:** fluxos de admin e aluno percorridos no navegador, incluindo celular. Não exercitados: promover/rebaixar admin pela tela (precisa de 2º usuário), editar aluno, desativar slot.
+- **Fase 3 em andamento:** lint e build limpos; faltam dados reais e smoke test em produção.
+
+## Estado inicial (referência)
 
 | Área | Situação |
 |---|---|
