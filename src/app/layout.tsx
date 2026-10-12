@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Lobster_Two } from "next/font/google";
+import { Toaster } from "@/components/ui/sonner";
 import { getSiteConfig } from "@/lib/cms";
 import "./globals.css";
 
@@ -27,7 +28,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${inter.variable} ${lobster.variable} h-full antialiased`}
       style={{ colorScheme: "dark" }}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <Toaster position="top-center" richColors closeButton />
+      </body>
     </html>
   );
 }

@@ -1,9 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { removeSlotMember, saveSlot, setSlotAtivo } from "@/app/dashboard/admin/actions";
+import { toast } from "sonner";
+import { saveSlot, setSlotAtivo } from "@/app/dashboard/admin/actions";
+import { formatPhone } from "@/app/dashboard/members";
+import { atualizar, enfileirar } from "@/lib/offline/store";
+import { msgGuardado, useAdminEstado } from "@/lib/offline/use-admin";
+import type { MembroVisao, SlotVisao } from "@/lib/offline/visao";
 import { DIAS, hhmm } from "@/app/dashboard/admin/format";
-import type { SlotRow } from "@/app/dashboard/admin/types";
 import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -13,12 +17,12 @@ import { Label } from "@/components/ui/label";
 import { FieldSelect } from "./field-select";
 import { EmptyNote } from "./section";
 import { Tag } from "./tag";
-import { Pencil, Plus, Power, PowerOff, UserMinus, Users } from "lucide-react";
+import { Pencil, Plus, Power, PowerOff, Search, UserMinus, UserPlus, Users } from "lucide-react";
 
 const DAY_OPTIONS = DIAS.map((label, i) => ({ value: String(i), label }));
 const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
 
-function SlotForm({ slot, onClose }: { slot: SlotRow | null; onClose: () => void }) {
+function SlotForm({ slot, onClose }: { slot: SlotVisao | null; onClose: () => void }) {
   const [dia, setDia] = useState(String(slot?.dia_semana ?? 1));
   const [inicio, setInicio] = useState(slot ? hhmm(slot.hora_inicio) : "07:00");
   const [fim, setFim] = useState(slot ? hhmm(slot.hora_fim) : "08:00");
@@ -33,12 +37,15 @@ function SlotForm({ slot, onClose }: { slot: SlotRow | null; onClose: () => void
     if (!Number.isInteger(capacidade) || capacidade < 1) return setError("Informe a capacidade (mínimo 1).");
     if (slot && capacidade < slot.ocupados)
       return setError(`Já há ${slot.ocupados} alunos neste horário. Remova alunos antes de reduzir.`);
+    if (!navigator.onLine) return setError("Criar ou editar horário precisa de conexão.");
     start(async () => {
       const res = await saveSlot({
         id: slot?.slot_id ?? null, diaSemana: Number(dia), horaInicio: inicio, horaFim: fim, capacidade,
       });
-      if (res.ok) onClose();
-      else setError(res.message);
+      if (!res.ok) return setError(res.message);
+      toast.success(slot ? "Horário salvo." : "Horário criado.");
+      await atualizar();
+      onClose();
     });
   }
 
@@ -75,16 +82,37 @@ function SlotForm({ slot, onClose }: { slot: SlotRow | null; onClose: () => void
   );
 }
 
-function SlotAlunos({ slot, onClose }: { slot: SlotRow; onClose: () => void }) {
-  const [error, setError] = useState("");
-  const [pending, start] = useTransition();
+function SlotAlunos({
+  slot, members, onClose,
+}: { slot: SlotVisao; members: MembroVisao[]; onClose: () => void }) {
+  const { online } = useAdminEstado();
+  const [busca, setBusca] = useState("");
+  const noHorario = new Set(slot.alunos.map((a) => a.member_id));
+  const q = busca.trim().toLowerCase();
+  const digitos = q.replace(/\D/g, "");
+  const candidatos = q
+    ? members
+        .filter((m) => !noHorario.has(m.member_id))
+        .filter((m) => (m.nome ?? "").toLowerCase().includes(q) || (digitos.length >= 3 && (m.telefone ?? "").includes(digitos)))
+        .slice(0, 8)
+    : [];
 
-  function remove(memberId: string) {
-    setError("");
-    start(async () => {
-      const res = await removeSlotMember(slot.slot_id, memberId);
-      if (!res.ok) setError(res.message);
-    });
+  // Admin pode tudo (decisão do dono): só avisa, não bloqueia.
+  async function adicionar(m: MembroVisao) {
+    await enfileirar({ tipo: "horario_entrar", payload: { slot_id: slot.slot_id, member_id: m.member_id } });
+    const avisos: string[] = [];
+    if (slot.ocupados + 1 > slot.capacidade) avisos.push("o horário ficou acima da capacidade");
+    if (m.vezes_semana != null && m.slots_usados + 1 > m.vezes_semana)
+      avisos.push(`${m.nome ?? "o aluno"} passou do limite do plano (${m.vezes_semana}x)`);
+    if (m.status !== "ativo") avisos.push(`${m.nome ?? "o aluno"} não está ativo`);
+    toast.success(msgGuardado(online, `${m.nome ?? "Aluno"} adicionado(a) ao horário`));
+    if (avisos.length) toast.warning(`Atenção: ${avisos.join("; ")}.`, { duration: 7000 });
+    setBusca("");
+  }
+
+  async function remover(a: SlotVisao["alunos"][number]) {
+    await enfileirar({ tipo: "horario_sair", payload: { slot_id: slot.slot_id, member_id: a.member_id } });
+    toast.success(msgGuardado(online, `${a.nome ?? "Aluno"} removido(a) do horário`));
   }
 
   return (
@@ -93,8 +121,41 @@ function SlotAlunos({ slot, onClose }: { slot: SlotRow; onClose: () => void }) {
         <DialogTitle className="font-display text-2xl">
           {DIAS[slot.dia_semana]} · {hhmm(slot.hora_inicio)}–{hhmm(slot.hora_fim)}
         </DialogTitle>
-        <DialogDescription>{slot.alunos.length} de {slot.capacidade} vagas ocupadas.</DialogDescription>
+        <DialogDescription>
+          {slot.ocupados} de {slot.capacidade} vagas ocupadas
+          {slot.ocupados > slot.capacidade ? " (acima da capacidade)" : ""}.
+        </DialogDescription>
       </DialogHeader>
+      <div className="grid gap-1.5">
+        <Label htmlFor="sl-busca">Adicionar aluno</Label>
+        <div className="relative">
+          <Search aria-hidden className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input id="sl-busca" value={busca} onChange={(e) => setBusca(e.target.value)} autoComplete="off"
+            placeholder="Nome ou telefone" className="h-10 pl-8 md:h-8" />
+        </div>
+        {q && (
+          candidatos.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Nenhum aluno encontrado fora deste horário.</p>
+          ) : (
+            <ul className="grid max-h-48 gap-1 overflow-y-auto">
+              {candidatos.map((m) => (
+                <li key={m.member_id} className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-1.5">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{m.nome ?? "—"}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {[m.plano_nome, m.telefone && formatPhone(m.telefone)].filter(Boolean).join(" · ") || "Sem plano"}
+                    </p>
+                  </div>
+                  <Button size="sm" onClick={() => void adicionar(m)} className="min-h-11 shrink-0 md:min-h-7"
+                    aria-label={`Adicionar ${m.nome ?? "aluno"} ao horário`}>
+                    <UserPlus data-icon="inline-start" />Adicionar
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )
+        )}
+      </div>
       {slot.alunos.length === 0 ? (
         <EmptyNote>Nenhum aluno neste horário.</EmptyNote>
       ) : (
@@ -102,10 +163,13 @@ function SlotAlunos({ slot, onClose }: { slot: SlotRow; onClose: () => void }) {
           {slot.alunos.map((a) => (
             <li key={a.member_id} className="flex items-center justify-between gap-2 rounded-lg border border-border bg-surface-2 px-3 py-2">
               <div className="min-w-0">
-                <p className="truncate font-medium">{a.nome ?? "—"}</p>
+                <p className="flex flex-wrap items-center gap-1.5 truncate font-medium">
+                  {a.nome ?? "—"}
+                  {a.erro ? <Tag hot title={a.erro}>Erro no envio</Tag> : a.pendente ? <Tag>Aguardando envio</Tag> : null}
+                </p>
                 <p className="truncate text-xs text-muted-foreground">{a.email}</p>
               </div>
-              <Button size="sm" variant="outline" disabled={pending} onClick={() => remove(a.member_id)}
+              <Button size="sm" variant="outline" onClick={() => void remover(a)}
                 className="min-h-11 md:min-h-7" aria-label={`Remover ${a.nome ?? "aluno"} do horário`}>
                 <UserMinus data-icon="inline-start" />
                 Remover
@@ -114,13 +178,12 @@ function SlotAlunos({ slot, onClose }: { slot: SlotRow; onClose: () => void }) {
           ))}
         </ul>
       )}
-      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <DialogFooter><Button onClick={onClose} className="min-h-11 md:min-h-8">Fechar</Button></DialogFooter>
     </>
   );
 }
 
-function SlotCard({ slot, onEdit, onAlunos }: { slot: SlotRow; onEdit: () => void; onAlunos: () => void }) {
+function SlotCard({ slot, onEdit, onAlunos }: { slot: SlotVisao; onEdit: () => void; onAlunos: () => void }) {
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
   const lotado = slot.vagas === 0;
@@ -128,9 +191,12 @@ function SlotCard({ slot, onEdit, onAlunos }: { slot: SlotRow; onEdit: () => voi
 
   function toggle() {
     setError("");
+    if (!navigator.onLine) return setError("Ativar ou desativar horário precisa de conexão.");
     start(async () => {
       const res = await setSlotAtivo(slot.slot_id, !slot.ativo);
-      if (!res.ok) setError(res.message);
+      if (!res.ok) return setError(res.message);
+      toast.success(slot.ativo ? "Horário desativado." : "Horário ativado.");
+      await atualizar();
     });
   }
 
@@ -159,8 +225,8 @@ function SlotCard({ slot, onEdit, onAlunos }: { slot: SlotRow; onEdit: () => voi
   );
 }
 
-export function SlotsBoard({ slots }: { slots: SlotRow[] }) {
-  // `form`: undefined = fechado, null = novo, SlotRow = editar. Ids evitam dado velho após revalidar.
+export function SlotsBoard({ slots, members }: { slots: SlotVisao[]; members: MembroVisao[] }) {
+  // `form`: undefined = fechado, null = novo, SlotVisao = editar. Ids evitam dado velho após revalidar.
   const [form, setForm] = useState<{ id: number | null } | undefined>();
   const [alunosId, setAlunosId] = useState<number | null>(null);
   const formSlot = form?.id != null ? (slots.find((s) => s.slot_id === form.id) ?? null) : null;
@@ -201,7 +267,7 @@ export function SlotsBoard({ slots }: { slots: SlotRow[] }) {
       </Dialog>
       <Dialog open={!!alunosSlot} onOpenChange={(o) => !o && setAlunosId(null)}>
         <DialogContent>
-          {alunosSlot && <SlotAlunos slot={alunosSlot} onClose={() => setAlunosId(null)} />}
+          {alunosSlot && <SlotAlunos slot={alunosSlot} members={members} onClose={() => setAlunosId(null)} />}
         </DialogContent>
       </Dialog>
     </div>

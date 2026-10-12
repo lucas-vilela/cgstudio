@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { saveMember, type SaveState } from "@/app/dashboard/actions";
 import { formatPhone, type Member } from "@/app/dashboard/members";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Loader2, Save } from "lucide-react";
+import { toast } from "sonner";
 
 const initial: SaveState = { ok: false };
 
@@ -22,6 +23,11 @@ function FieldError({ id, message }: { id: string; message?: string }) {
 export function MemberForm({ member }: { member: Member | null }) {
   const [state, action, pending] = useActionState(saveMember, initial);
   const e = state.errors ?? {};
+
+  // Sucesso vira toast; erro geral continua junto do formulário.
+  useEffect(() => {
+    if (state.ok && state.message) toast.success(state.message);
+  }, [state]);
 
   if (!member)
     return (
@@ -70,7 +76,7 @@ export function MemberForm({ member }: { member: Member | null }) {
             {pending ? <Loader2 data-icon="inline-start" className="animate-spin" /> : <Save data-icon="inline-start" />}
             {pending ? "Salvando…" : "Salvar alterações"}
           </Button>
-          {state.message && (
+          {!state.ok && state.message && (
             <p role="status" className={state.ok ? "text-sm text-muted-foreground" : "text-sm text-destructive"}>
               {state.message}
             </p>

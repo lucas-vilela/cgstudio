@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { EmptyNote, Panel } from "../section";
+import { toast } from "sonner";
 
 const aulas = (n: number) => `${n} ${n === 1 ? "aula" : "aulas"} por semana`;
 
@@ -101,7 +102,8 @@ function PlanoCard({ plano }: { plano: Plan }) {
     if ("error" in dados) return setMsg({ ok: false, text: dados.error });
     start(async () => {
       const res = await updatePlano({ id: plano.id, ...dados });
-      setMsg(res.ok ? { ok: true, text: "Salvo." } : { ok: false, text: res.message });
+      if (res.ok) toast.success(`Plano ${dados.nome.trim()} salvo.`);
+      setMsg(res.ok ? null : { ok: false, text: res.message });
     });
   }
 
@@ -113,7 +115,8 @@ function PlanoCard({ plano }: { plano: Plan }) {
       const res = await deletePlano(plano.id);
       setConfirmar(false);
       if (!res.ok) return setMsg({ ok: false, text: res.message });
-      if (!res.data.excluido) setEmUso({ alunos: res.data.alunos, total: res.data.total });
+      if (res.data.excluido) toast.success(`Plano ${plano.nome} excluído.`);
+      else setEmUso({ alunos: res.data.alunos, total: res.data.total });
     });
   }
 
@@ -172,7 +175,10 @@ function NovoPlano({ onClose }: { onClose: () => void }) {
     if ("error" in dados) return setMsg({ ok: false, text: dados.error });
     start(async () => {
       const res = await createPlano(dados);
-      if (res.ok) onClose();
+      if (res.ok) {
+        toast.success(`Plano ${dados.nome.trim()} criado.`);
+        onClose();
+      }
       else setMsg({ ok: false, text: res.message });
     });
   }

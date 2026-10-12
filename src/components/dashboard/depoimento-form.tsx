@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Loader2, Send } from "lucide-react";
 import { enviarDepoimento, type DepoimentoState } from "@/app/dashboard/depoimento-actions";
 import type { OwnDepoimento } from "@/app/dashboard/data";
@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 const initial: DepoimentoState = { ok: false };
 const MIN = 10;
@@ -27,6 +28,10 @@ export function DepoimentoForm({
   const [state, action, pending] = useActionState(enviarDepoimento, initial);
   const [texto, setTexto] = useState(depoimento?.texto ?? "");
   const ativo = status === "ativo";
+
+  useEffect(() => {
+    if (state.ok && state.message) toast.success(state.message);
+  }, [state]);
   const estado = depoimento ? ESTADO[depoimento.status] : null;
   const tamanho = texto.trim().length;
   const semMudanca = depoimento != null && depoimento.texto.trim() === texto.trim() && depoimento.status !== "recusado";
@@ -75,7 +80,7 @@ export function DepoimentoForm({
             {pending ? <Loader2 data-icon="inline-start" className="animate-spin" /> : <Send data-icon="inline-start" />}
             {pending ? "Enviando…" : depoimento ? "Enviar alteração" : "Enviar depoimento"}
           </Button>
-          {state.message && (
+          {!state.ok && state.message && (
             <p role={state.ok ? "status" : "alert"}
               className={state.ok ? "text-sm text-muted-foreground" : "text-sm text-destructive"}>
               {state.message}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { toast } from "sonner";
 import { setUserRole } from "@/app/dashboard/admin/actions";
 import type { AdminUser } from "@/app/dashboard/admin/types";
 import { Button } from "@/components/ui/button";
@@ -47,7 +48,10 @@ export function AdminsManager({
     start(async () => {
       const res = await setUserRole(userId, role);
       if (!res.ok) setError(res.message);
-      else if (role === "admin") setQuery("");
+      else {
+        toast.success(role === "admin" ? "Aluno promovido a admin." : "Admin rebaixado a aluno.");
+        if (role === "admin") setQuery("");
+      }
       setBusy(null);
     });
   }

@@ -1,0 +1,111 @@
+"use client";
+
+import { useState } from "react";
+import { toast } from "sonner";
+import { Pencil, RotateCw, Trash2 } from "lucide-react";
+import { brl, DIAS, formatDate, hhmm } from "@/app/dashboard/admin/format";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { descartar, tentarDeNovo } from "@/lib/offline/store";
+import type { ItemFila } from "@/lib/offline/tipos";
+import { useAdminEstado } from "@/lib/offline/use-admin";
+import type { Visao } from "@/lib/offline/visao";
+import { MemberForm } from "../members-table";
+import { PaymentForm } from "../register-payment-dialog";
+import { Panel } from "../section";
+
+function descrever(item: ItemFila, visao: Visao) {
+  const nome = (id: string) => visao.members.find((m) => m.member_id === id)?.nome ?? "aluno";
+  switch (item.tipo) {
+    case "pagamento":
+      return `Pagamento de ${nome(item.payload.member_id)} · ${item.payload.valor != null ? brl(item.payload.valor) : "valor do plano"} em ${formatDate(item.payload.pago_em)}`;
+    case "aluno_criar":
+      return `Cadastro de ${item.payload.nome}`;
+    case "aluno_editar":
+      return `Alteração de ${nome(item.payload.member_id)}`;
+    case "horario_entrar":
+    case "horario_sair": {
+      const s = visao.slots.find((x) => x.slot_id === item.payload.slot_id);
+      const h = s ? `${DIAS[s.dia_semana]} ${hhmm(s.hora_inicio)}` : "horário";
+      return `${nome(item.payload.member_id)} ${item.tipo === "horario_entrar" ? "entrar em" : "sair de"} ${h}`;
+    }
+  }
+}
+
+function Linha({ item, visao, onCorrigir }: { item: ItemFila; visao: Visao; onCorrigir: () => void }) {
+  const [confirmar, setConfirmar] = useState(false);
+  const corrigivel = item.tipo === "pagamento" || item.tipo === "aluno_criar";
+  return (
+    <li className="rounded-xl border border-accent/50 bg-surface-2 p-4">
+      <p className="font-medium">{descrever(item, visao)}</p>
+      <p className="mt-1 text-sm text-accent">{item.erro}</p>
+      <p className="text-xs text-muted-foreground">Registrado em {new Date(item.criado_em).toLocaleString("pt-BR")}</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {corrigivel && (
+          <Button size="sm" onClick={onCorrigir} className="min-h-11 md:min-h-7">
+            <Pencil data-icon="inline-start" />Corrigir
+          </Button>
+        )}
+        <Button size="sm" variant="outline" onClick={() => void tentarDeNovo(item.id)} className="min-h-11 md:min-h-7">
+          <RotateCw data-icon="inline-start" />Tentar de novo
+        </Button>
+        {/* Descartar não tem volta: o primeiro clique só pede confirmação. */}
+        <Button size="sm" variant="destructive" className="min-h-11 md:min-h-7" onBlur={() => setConfirmar(false)}
+          onClick={() => {
+            if (!confirmar) return setConfirmar(true);
+            void descartar(item.id).then(() => toast.success("Registro descartado."));
+          }}>
+          <Trash2 data-icon="inline-start" />{confirmar ? "Confirmar descarte" : "Descartar"}
+        </Button>
+      </div>
+    </li>
+  );
+}
+
+// "Pendências com erro": o servidor recusou. Nada é descartado sem o admin decidir.
+export function Pendencias({ visao }: { visao: Visao }) {
+  const { fila } = useAdminEstado();
+  const [corrigindoId, setCorrigindoId] = useState<string | null>(null);
+  const erros = fila.filter((i) => i.status === "erro");
+  const corrigindo = erros.find((i) => i.id === corrigindoId);
+  if (!erros.length) return null;
+
+  const membro = (id: string) => visao.members.find((m) => m.member_id === id);
+
+  return (
+    <Panel id="pendencias" aria-labelledby="pend-title" className="border-accent/60">
+      <h2 id="pend-title" className="text-3xl">Pendências com erro</h2>
+      <p className="mb-3 text-sm text-muted-foreground">
+        O servidor não aceitou estes registros. Corrija e envie de novo, ou descarte.
+      </p>
+      <ul className="grid gap-3 lg:grid-cols-2">
+        {erros.map((i) => <Linha key={i.id} item={i} visao={visao} onCorrigir={() => setCorrigindoId(i.id)} />)}
+      </ul>
+      <Dialog open={!!corrigindo} onOpenChange={(o) => !o && setCorrigindoId(null)}>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto">
+          {corrigindo?.tipo === "pagamento" && (
+            <PaymentForm
+              corrigindo={corrigindo}
+              member={{
+                id: corrigindo.payload.member_id,
+                nome: membro(corrigindo.payload.member_id)?.nome ?? null,
+                valor: membro(corrigindo.payload.member_id)?.valor ?? null,
+              }}
+              onClose={() => setCorrigindoId(null)}
+            />
+          )}
+          {corrigindo?.tipo === "aluno_criar" && (
+            <MemberForm
+              member={null}
+              corrigindo={corrigindo}
+              plans={visao.plans}
+              treinos={visao.snapshot.treinos}
+              todos={visao.members}
+              onClose={() => setCorrigindoId(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </Panel>
+  );
+}

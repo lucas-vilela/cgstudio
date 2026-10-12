@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Panel } from "../section";
+import { toast } from "sonner";
 
 type Campo = {
   key: keyof SiteConfigRow;
@@ -64,7 +65,8 @@ export function TextosEditor({
     setMsg(null);
     start(async () => {
       const res = await saveSiteConfig(valores);
-      setMsg(res.ok ? { ok: true, text: "Textos salvos." } : { ok: false, text: res.message });
+      if (res.ok) toast.success("Textos da home salvos.");
+      setMsg(res.ok ? null : { ok: false, text: res.message });
     });
   }
 

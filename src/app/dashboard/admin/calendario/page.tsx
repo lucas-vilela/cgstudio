@@ -1,29 +1,19 @@
 import { Suspense } from "react";
+import { AdminApp } from "@/components/dashboard/admin/app/admin-app";
 import { PageLoading } from "@/components/dashboard/admin/page-loading";
-import { SlotsBoard } from "@/components/dashboard/admin/slots-board";
 import { requireAdmin } from "../guard";
-import { getSlots } from "../queries";
 
-export default function CalendarioPage() {
+// Alunos, Financeiro e Calendário: o mesmo app de cliente, que lê os dados salvos no aparelho
+// (funciona offline) e sincroniza com o servidor quando há conexão.
+export default function Page() {
   return (
     <Suspense fallback={<PageLoading />}>
-      <CalendarioContent />
+      <Conteudo />
     </Suspense>
   );
 }
 
-async function CalendarioContent() {
-  await requireAdmin();
-  const slots = await getSlots();
-  return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-4xl">Calendário</h1>
-        <p className="text-sm text-muted-foreground">
-          Horários semanais, capacidade e alunos de cada turma.
-        </p>
-      </div>
-      <SlotsBoard slots={slots} />
-    </div>
-  );
+async function Conteudo() {
+  const user = await requireAdmin();
+  return <AdminApp userId={user.id} />;
 }

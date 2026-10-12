@@ -13,8 +13,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyNote, Panel } from "../section";
 import { Tag } from "../tag";
+import { toast } from "sonner";
 
 type Acao = "aprovar" | "recusar" | "esconder" | "mostrar" | "excluir";
+
+const ACAO_MSG: Record<Acao, string> = {
+  aprovar: "Depoimento publicado na home.",
+  recusar: "Depoimento recusado.",
+  esconder: "Depoimento escondido da home.",
+  mostrar: "Depoimento de volta na home.",
+  excluir: "Depoimento excluído.",
+};
 
 function EditarTexto({ item, onClose }: { item: DepoimentoAdmin; onClose: () => void }) {
   const [texto, setTexto] = useState(item.texto);
@@ -27,7 +36,10 @@ function EditarTexto({ item, onClose }: { item: DepoimentoAdmin; onClose: () => 
     if (texto.trim() === item.texto.trim()) return onClose();
     start(async () => {
       const res = await editarDepoimento(item.id, texto);
-      if (res.ok) onClose();
+      if (res.ok) {
+        toast.success("Texto do depoimento ajustado.");
+        onClose();
+      }
       else setError(res.message);
     });
   }
@@ -65,6 +77,7 @@ function Item({ item, onEdit }: { item: DepoimentoAdmin; onEdit: () => void }) {
     start(async () => {
       const res = await moderarDepoimento(item.id, acao);
       if (!res.ok) setError(res.message);
+      else toast.success(ACAO_MSG[acao]);
     });
   }
 

@@ -1,8 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { registerPayment } from "@/app/dashboard/admin/actions";
-import { formatDate, moneyInput, parseMoney, todayISO } from "@/app/dashboard/admin/format";
+import { useState } from "react";
+import { toast } from "sonner";
+import { moneyInput, parseMoney, todayISO } from "@/app/dashboard/admin/format";
+import { corrigir, enfileirar } from "@/lib/offline/store";
+import type { ItemFila } from "@/lib/offline/tipos";
+import { msgGuardado, useAdminEstado } from "@/lib/offline/use-admin";
 import { FORMAS, type Forma } from "@/app/dashboard/admin/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,49 +19,43 @@ import { Banknote } from "lucide-react";
 
 export type PaymentTarget = { id: string; nome: string | null; valor: number | null };
 
-function PaymentForm({ member, onClose }: { member: PaymentTarget; onClose: () => void }) {
-  const [valor, setValor] = useState(moneyInput(member.valor));
-  const [forma, setForma] = useState<Forma>("pix");
-  const [data, setData] = useState(todayISO);
-  const [obs, setObs] = useState("");
+function PaymentForm({
+  member, onClose, corrigindo,
+}: {
+  member: PaymentTarget;
+  onClose: () => void;
+  // Item da fila com erro sendo corrigido (Pendências): mantém o mesmo id ao reenviar.
+  corrigindo?: Extract<ItemFila, { tipo: "pagamento" }>;
+}) {
+  const inicial = corrigindo?.payload;
+  const [valor, setValor] = useState(moneyInput(inicial?.valor ?? member.valor));
+  const [forma, setForma] = useState<Forma>(inicial?.forma ?? "pix");
+  const [data, setData] = useState(inicial?.pago_em ?? todayISO());
+  const [obs, setObs] = useState(inicial?.observacao ?? "");
   const [error, setError] = useState("");
-  const [novoVenc, setNovoVenc] = useState<string | null>(null);
-  const [pending, start] = useTransition();
+  const [pending, setPending] = useState(false);
+  const { online } = useAdminEstado();
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     const parsed = parseMoney(valor);
     if (parsed !== null && !(parsed > 0)) return setError("Informe um valor maior que zero.");
     if (parsed === null && member.valor == null)
       return setError("Informe o valor (o aluno não tem plano definido).");
-    start(async () => {
-      const res = await registerPayment({
-        memberId: member.id,
-        forma,
-        valor: parsed,
-        pagoEm: data || null,
-        observacao: obs,
-      });
-      if (res.ok) setNovoVenc(res.data.vencimento);
-      else setError(res.message);
-    });
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return setError("Informe a data do pagamento.");
+    if (obs.trim().length > 300) return setError("Observação muito longa (máx. 300).");
+    setPending(true);
+    // A data é a do registro aqui; o vencimento novo é calculado pelo servidor no envio.
+    const payload = {
+      member_id: member.id, forma, valor: parsed, pago_em: data, observacao: obs.trim() || null,
+    };
+    if (corrigindo) await corrigir(corrigindo.id, payload);
+    else await enfileirar({ tipo: "pagamento", payload });
+    setPending(false);
+    toast.success(msgGuardado(online, `Pagamento de ${member.nome ?? "aluno"} registrado`));
+    onClose();
   }
-
-  if (novoVenc)
-    return (
-      <>
-        <DialogHeader>
-          <DialogTitle className="font-display text-2xl">Pagamento registrado</DialogTitle>
-          <DialogDescription>
-            {member.nome ?? "Aluno"} está ativo. Novo vencimento: <b>{formatDate(novoVenc)}</b>.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button onClick={onClose}>Fechar</Button>
-        </DialogFooter>
-      </>
-    );
 
   return (
     <form onSubmit={submit} className="grid gap-4" noValidate>
@@ -99,6 +96,8 @@ function PaymentForm({ member, onClose }: { member: PaymentTarget; onClose: () =
 }
 
 // Botão + dialog. O formulário só monta com o dialog aberto, então o estado reinicia a cada uso.
+export { PaymentForm };
+
 export function RegisterPaymentButton({
   member,
   label = "Registrar pagamento",

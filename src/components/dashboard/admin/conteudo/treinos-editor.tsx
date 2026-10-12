@@ -17,6 +17,7 @@ import { ICONE_OPTIONS, TreinoIcon } from "@/lib/treino-icones";
 import { FieldSelect } from "../field-select";
 import { EmptyNote, Panel } from "../section";
 import { Tag } from "../tag";
+import { toast } from "sonner";
 
 function TreinoForm({ treino, onClose }: { treino: Treino | null; onClose: () => void }) {
   const [nome, setNome] = useState(treino?.nome ?? "");
@@ -32,7 +33,10 @@ function TreinoForm({ treino, onClose }: { treino: Treino | null; onClose: () =>
     if (!descricao.trim()) return setError("Informe a descrição.");
     start(async () => {
       const res = await saveTreino({ id: treino?.id ?? null, nome, descricao, icone });
-      if (res.ok) onClose();
+      if (res.ok) {
+        toast.success(treino ? "Treino salvo." : "Treino criado.");
+        onClose();
+      }
       else setError(res.message);
     });
   }
@@ -77,7 +81,10 @@ function ConfirmDelete({ treino, onClose }: { treino: Treino; onClose: () => voi
     setError("");
     start(async () => {
       const res = await deleteTreino(treino.id);
-      if (res.ok) onClose();
+      if (res.ok) {
+        toast.success(`Treino ${treino.nome} excluído.`);
+        onClose();
+      }
       else setError(res.message);
     });
   }

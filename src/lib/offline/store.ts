@@ -1,0 +1,267 @@
+import { toast } from "sonner";
+import { abrirDB, filaDoUsuario, contarFila } from "./db";
+import type { AcaoFila, AdminSnapshot, ItemFila, RespostaAcao } from "./tipos";
+
+// Estado do app offline do admin: último snapshot do servidor + fila de ações locais.
+// Lido pelas telas via useSyncExternalStore (ver use-admin.ts).
+
+export type EstadoAdmin = {
+  userId: string | null;
+  carregado: boolean; // já leu o IndexedDB
+  snapshot: AdminSnapshot | null;
+  fila: ItemFila[];
+  online: boolean;
+  sincronizando: boolean;
+  atualizando: boolean;
+  precisaLogin: boolean;
+  filaDeOutraConta: boolean;
+};
+
+let estado: EstadoAdmin = {
+  userId: null,
+  carregado: false,
+  snapshot: null,
+  fila: [],
+  online: true,
+  sincronizando: false,
+  atualizando: false,
+  precisaLogin: false,
+  filaDeOutraConta: false,
+};
+const ouvintes = new Set<() => void>();
+
+function set(parcial: Partial<EstadoAdmin>) {
+  estado = { ...estado, ...parcial };
+  ouvintes.forEach((f) => f());
+}
+
+export const adminStore = {
+  subscribe(f: () => void) {
+    ouvintes.add(f);
+    return () => ouvintes.delete(f);
+  },
+  get: () => estado,
+};
+
+// ---------------------------------------------------------------- início e conexão
+
+let eventosLigados = false;
+let timerRetry: ReturnType<typeof setTimeout> | null = null;
+
+function ligarEventos() {
+  if (eventosLigados || typeof window === "undefined") return;
+  eventosLigados = true;
+  window.addEventListener("online", () => {
+    set({ online: true });
+    toast.success("Conexão de volta.");
+    void sincronizar().then(() => atualizar());
+  });
+  window.addEventListener("offline", () => {
+    set({ online: false });
+    toast.warning("Sem conexão. Você pode continuar registrando; envio automático quando voltar.", {
+      duration: 6000,
+    });
+  });
+  window.addEventListener("focus", () => void sincronizar());
+}
+
+export async function iniciar(userId: string) {
+  ligarEventos();
+  if (estado.userId === userId && estado.carregado) return;
+  set({ userId, carregado: false, snapshot: null, fila: [], online: navigator.onLine });
+
+  const db = await abrirDB();
+  const [snapshot, fila, total] = await Promise.all([
+    db.get("snapshot", userId),
+    filaDoUsuario(userId),
+    contarFila(),
+  ]);
+  if (estado.userId !== userId) return; // trocou de usuário no meio
+  set({
+    carregado: true,
+    snapshot: snapshot?.user_id === userId ? snapshot : null,
+    fila,
+    filaDeOutraConta: total > fila.length,
+  });
+  if (navigator.onLine) await sincronizar();
+  await atualizar();
+}
+
+// ---------------------------------------------------------------- snapshot
+
+export async function atualizar() {
+  const userId = estado.userId;
+  if (!userId || !navigator.onLine || estado.atualizando) return;
+  set({ atualizando: true });
+  try {
+    const res = await fetch("/api/admin/snapshot", { cache: "no-store" });
+    if (res.status === 401 || res.status === 403) {
+      set({ precisaLogin: true });
+      return;
+    }
+    if (!res.ok) return;
+    const snap = (await res.json()) as AdminSnapshot;
+    if (snap.user_id !== userId || estado.userId !== userId) return;
+    await (await abrirDB()).put("snapshot", snap, userId);
+    set({ snapshot: snap, precisaLogin: false });
+  } catch {
+    // sem rede: segue com o snapshot salvo
+  } finally {
+    set({ atualizando: false });
+  }
+}
+
+// ---------------------------------------------------------------- fila
+
+const uuid = () => crypto.randomUUID();
+export const novoId = uuid;
+
+async function salvarItem(item: ItemFila) {
+  await (await abrirDB()).put("fila", item);
+}
+
+async function removerItem(id: string) {
+  await (await abrirDB()).delete("fila", id);
+}
+
+export async function enfileirar(acao: AcaoFila): Promise<ItemFila | null> {
+  const userId = estado.userId;
+  if (!userId) {
+    toast.error("Sessão não carregada. Recarregue a página.");
+    return null;
+  }
+  const item: ItemFila = {
+    ...acao,
+    id: uuid(),
+    user_id: userId,
+    criado_em: new Date().toISOString(),
+    status: "pendente",
+    tentativas: 0,
+  };
+  await salvarItem(item);
+  set({ fila: [...estado.fila, item] });
+  if (navigator.onLine) void sincronizar();
+  return item;
+}
+
+const membroDe = (item: ItemFila) =>
+  "member_id" in item.payload ? (item.payload as { member_id: string }).member_id : null;
+
+// Cadastro com erro bloqueia as ações seguintes do mesmo aluno (pagamento, horário…).
+function bloqueadoPor(item: ItemFila, fila: ItemFila[]) {
+  if (item.tipo === "aluno_criar") return null;
+  const mid = membroDe(item);
+  return fila.find((o) => o.tipo === "aluno_criar" && o.status === "erro" && o.payload.member_id === mid) ?? null;
+}
+
+let emCurso: Promise<void> | null = null;
+
+export function sincronizar(): Promise<void> {
+  emCurso ??= rodarSync().finally(() => {
+    emCurso = null;
+  });
+  return emCurso;
+}
+
+async function rodarSync() {
+  const userId = estado.userId;
+  if (!userId || !navigator.onLine || !estado.fila.some((i) => i.status === "pendente")) return;
+  set({ sincronizando: true });
+  let enviados = 0;
+  const falhas: string[] = [];
+
+  try {
+    for (const original of [...estado.fila]) {
+      const item = estado.fila.find((i) => i.id === original.id);
+      if (!item || item.status !== "pendente") continue;
+
+      const bloqueio = bloqueadoPor(item, estado.fila);
+      if (bloqueio) {
+        const nome = bloqueio.tipo === "aluno_criar" ? bloqueio.payload.nome : "aluno";
+        await marcarErro(item, `Aguardando o cadastro de ${nome}, que falhou. Corrija o cadastro primeiro.`);
+        continue;
+      }
+
+      let r: RespostaAcao;
+      try {
+        const res = await fetch("/api/admin/acoes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: item.id, tipo: item.tipo, payload: item.payload }),
+        });
+        r = (await res.json()) as RespostaAcao;
+      } catch {
+        r = { ok: false, tipo: "temporario", mensagem: "Sem conexão com o servidor." };
+      }
+
+      if (r.ok) {
+        await removerItem(item.id);
+        set({ fila: estado.fila.filter((i) => i.id !== item.id) });
+        enviados++;
+      } else if (r.tipo === "regra") {
+        await marcarErro(item, r.mensagem);
+        falhas.push(r.mensagem);
+      } else if (r.tipo === "sessao") {
+        set({ precisaLogin: true });
+        toast.error("Sua sessão expirou. Entre novamente para enviar os registros guardados.");
+        return;
+      } else {
+        const atualizado = { ...item, tentativas: item.tentativas + 1 };
+        await salvarItem(atualizado);
+        set({ fila: estado.fila.map((i) => (i.id === item.id ? atualizado : i)) });
+        agendarRetry(Math.min(60_000, 5_000 * 2 ** Math.min(atualizado.tentativas, 4)));
+        return;
+      }
+    }
+  } finally {
+    set({ sincronizando: false });
+    if (enviados) toast.success(`${enviados} ${enviados === 1 ? "registro enviado" : "registros enviados"}.`);
+    if (falhas.length)
+      toast.error(
+        `${falhas.length} ${falhas.length === 1 ? "registro não foi aceito" : "registros não foram aceitos"} pelo servidor. Veja em Pendências.`,
+        { duration: 8000 },
+      );
+    if (enviados) void atualizar();
+  }
+}
+
+function agendarRetry(ms: number) {
+  if (timerRetry) clearTimeout(timerRetry);
+  timerRetry = setTimeout(() => void sincronizar(), ms);
+}
+
+async function marcarErro(item: ItemFila, erro: string) {
+  const atualizado: ItemFila = { ...item, status: "erro", erro };
+  await salvarItem(atualizado);
+  set({ fila: estado.fila.map((i) => (i.id === item.id ? atualizado : i)) });
+}
+
+// ---------------------------------------------------------------- pendências com erro
+
+export async function descartar(id: string) {
+  await removerItem(id);
+  set({ fila: estado.fila.filter((i) => i.id !== id) });
+}
+
+// Reenvia; num cadastro, também libera as ações do mesmo aluno que esperavam por ele.
+export async function tentarDeNovo(id: string) {
+  const alvo = estado.fila.find((i) => i.id === id);
+  if (!alvo) return;
+  const liberar = (i: ItemFila) =>
+    i.id === id ||
+    (alvo.tipo === "aluno_criar" && i.status === "erro" && membroDe(i) === alvo.payload.member_id);
+  const fila = estado.fila.map((i) => (liberar(i) ? { ...i, status: "pendente" as const, erro: undefined } : i));
+  for (const i of fila) if (liberar(i)) await salvarItem(i);
+  set({ fila });
+  void sincronizar();
+}
+
+// Corrige o conteúdo (ex.: telefone) mantendo o mesmo id (idempotência) e reenvia.
+export async function corrigir(id: string, payload: AcaoFila["payload"]) {
+  const alvo = estado.fila.find((i) => i.id === id);
+  if (!alvo) return;
+  const corrigido = { ...alvo, payload, status: "pendente", erro: undefined } as ItemFila;
+  await salvarItem(corrigido);
+  set({ fila: estado.fila.map((i) => (i.id === id ? corrigido : i)) });
+  await tentarDeNovo(id);
+}

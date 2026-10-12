@@ -56,7 +56,7 @@ async function DashboardContent() {
               {status.label}
             </Badge>
           )}
-          <SignOutButton />
+          <SignOutButton limparDadosDe={admin ? user.id : undefined} />
           {admin && (
             <Link href="/dashboard/admin" className={buttonVariants({ variant: "outline" })}>
               <LayoutDashboard data-icon="inline-start" />

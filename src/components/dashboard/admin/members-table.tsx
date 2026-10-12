@@ -1,9 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { createMember, deleteMemberSemLogin, updateMember } from "@/app/dashboard/admin/actions";
+import { useState } from "react";
+import { toast } from "sonner";
+import { deleteMemberSemLogin } from "@/app/dashboard/admin/actions";
+import { atualizar, corrigir, enfileirar, novoId } from "@/lib/offline/store";
+import type { CamposAluno, ItemFila } from "@/lib/offline/tipos";
+import { msgGuardado, useAdminEstado } from "@/lib/offline/use-admin";
+import type { MembroVisao } from "@/lib/offline/visao";
 import { brl, diasLabel, formatDate, moneyInput, parseMoney } from "@/app/dashboard/admin/format";
-import type { AdminMember, Plan, Treino } from "@/app/dashboard/admin/types";
+import type { Plan, Treino } from "@/app/dashboard/admin/types";
 import { formatPhone, statusLabel, STATUSES } from "@/app/dashboard/members";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,7 +30,7 @@ const NO_PLAN = "none";
 const mesmosTreinos = (a: number[], b: number[]) =>
   a.length === b.length && a.every((id) => b.includes(id));
 
-function VencimentoCell({ m }: { m: AdminMember }) {
+function VencimentoCell({ m }: { m: MembroVisao }) {
   if (!m.vencimento) return <span className="text-muted-foreground">Sem vencimento</span>;
   const dias = m.dias_para_vencer ?? 0;
   return (
@@ -44,63 +49,104 @@ function VencimentoCell({ m }: { m: AdminMember }) {
 
 // Um formulário para criar (member = null) e editar. Nome, telefone e e-mail só aparecem para quem
 // não tem conta Google: os de quem tem conta são do próprio aluno / do Google.
-function MemberForm({
-  member, plans, treinos, onClose,
-}: { member: AdminMember | null; plans: Plan[]; treinos: Treino[]; onClose: () => void }) {
+export function MemberForm({
+  member, plans, treinos, todos, onClose, corrigindo,
+}: {
+  member: MembroVisao | null;
+  plans: Plan[];
+  treinos: Treino[];
+  todos: MembroVisao[]; // para avisar de telefone repetido já offline
+  onClose: () => void;
+  // Cadastro da fila com erro sendo corrigido (Pendências): mantém o mesmo id ao reenviar.
+  corrigindo?: Extract<ItemFila, { tipo: "aluno_criar" }>;
+}) {
   const novo = member === null;
+  const { online } = useAdminEstado();
   const editaDados = novo || !member.tem_login;
-  const [nome, setNome] = useState(member?.nome ?? "");
-  const [telefone, setTelefone] = useState(member?.telefone ? formatPhone(member.telefone) : "");
-  const [email, setEmail] = useState(member?.email ?? "");
-  const [planId, setPlanId] = useState(member?.plan_id ? String(member.plan_id) : NO_PLAN);
-  const [valor, setValor] = useState(moneyInput(member?.valor_acordado ?? null));
+  // Corrigindo um cadastro recusado: começa com o que foi enviado.
+  const base = corrigindo?.payload;
+  const [nome, setNome] = useState(base?.nome ?? member?.nome ?? "");
+  const [telefone, setTelefone] = useState(formatPhone(base?.telefone ?? member?.telefone ?? "") || "");
+  const [email, setEmail] = useState(base?.email ?? member?.email ?? "");
+  const [planId, setPlanId] = useState(
+    (base ? base.plan_id : member?.plan_id) ? String(base ? base.plan_id : member?.plan_id) : NO_PLAN,
+  );
+  const [valor, setValor] = useState(moneyInput(base ? base.valor_acordado : (member?.valor_acordado ?? null)));
   const [status, setStatus] = useState<string>(member?.status ?? "pendente");
-  const [treinoIds, setTreinoIds] = useState<number[]>(member?.treino_ids ?? []);
+  const [treinoIds, setTreinoIds] = useState<number[]>(base?.treino_ids ?? member?.treino_ids ?? []);
   const [confirmarExclusao, setConfirmarExclusao] = useState(false);
   const [error, setError] = useState("");
-  const [pending, start] = useTransition();
+  const [pending, setPending] = useState(false);
   const padrao = plans.find((p) => String(p.id) === planId)?.valor_padrao ?? null;
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     const parsed = parseMoney(valor);
     if (parsed !== null && Number.isNaN(parsed)) return setError("Valor acordado inválido.");
+    const tel = telefone.replace(/\D/g, "");
     if (editaDados && nome.trim().length < 2) return setError("Informe o nome completo.");
-    if (editaDados && !/^\d{10,11}$/.test(telefone.replace(/\D/g, "")))
-      return setError("Telefone inválido. Use DDD + número.");
+    if (editaDados && !/^\d{10,11}$/.test(tel)) return setError("Telefone inválido. Use DDD + número.");
+    if (editaDados && email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
+      return setError("E-mail inválido.");
+    const outro = (m: MembroVisao) => m.member_id !== member?.member_id && m.member_id !== corrigindo?.payload.member_id;
+    if (editaDados && todos.some((m) => outro(m) && m.telefone === tel))
+      return setError("Este telefone já está em uso por outro cadastro. Informe outro número.");
+    const mail = email.trim().toLowerCase() || null;
+    if (editaDados && mail && todos.some((m) => outro(m) && m.email?.toLowerCase() === mail))
+      return setError("Este e-mail já está em uso por outro cadastro.");
     const plano = planId === NO_PLAN ? null : Number(planId);
-    start(async () => {
-      const res = novo
-        ? await createMember({ nome, telefone, email, planId: plano, valorAcordado: parsed, treinoIds })
-        : await updateMember({
-            memberId: member.member_id,
-            planId: plano,
-            valorAcordado: parsed,
-            status,
-            treinoIds: mesmosTreinos(treinoIds, member.treino_ids) ? null : treinoIds,
-            dados: editaDados ? { nome, telefone, email } : null,
-          });
-      if (res.ok) onClose();
-      else setError(res.message);
-    });
+
+    setPending(true);
+    if (novo) {
+      const payload = {
+        member_id: corrigindo?.payload.member_id ?? novoId(),
+        nome: nome.trim(), telefone: tel, email: mail,
+        plan_id: plano, valor_acordado: parsed, treino_ids: treinoIds,
+      };
+      if (corrigindo) await corrigir(corrigindo.id, payload);
+      else await enfileirar({ tipo: "aluno_criar", payload });
+      toast.success(msgGuardado(online, `${payload.nome} cadastrado(a)`));
+    } else {
+      // Só os campos que mudaram: não desfaz o que outro admin ou a rotina diária mudou.
+      const campos: CamposAluno = {};
+      if (plano !== member.plan_id) campos.plan_id = plano;
+      if (parsed !== member.valor_acordado) campos.valor_acordado = parsed;
+      if (status !== member.status) campos.status = status as CamposAluno["status"];
+      if (!mesmosTreinos(treinoIds, member.treino_ids)) campos.treino_ids = treinoIds;
+      if (editaDados) {
+        if (nome.trim() !== (member.nome ?? "")) campos.nome = nome.trim();
+        if (tel !== (member.telefone ?? "")) campos.telefone = tel;
+        if (mail !== (member.email?.toLowerCase() ?? null)) campos.email = mail;
+      }
+      if (Object.keys(campos).length) {
+        await enfileirar({ tipo: "aluno_editar", payload: { member_id: member.member_id, campos } });
+        toast.success(msgGuardado(online, `Alterações de ${member.nome ?? "aluno"} salvas`));
+      }
+    }
+    setPending(false);
+    onClose();
   }
 
   function excluir() {
     if (!member) return;
+    if (!online) return setError("Excluir cadastro precisa de conexão.");
     if (!confirmarExclusao) return setConfirmarExclusao(true);
     setError("");
-    start(async () => {
-      const res = await deleteMemberSemLogin(member.member_id);
-      if (res.ok) onClose();
-      else setError(res.message);
+    setPending(true);
+    void deleteMemberSemLogin(member.member_id).then(async (res) => {
+      setPending(false);
+      if (!res.ok) return setError(res.message);
+      toast.success(`Cadastro de ${member.nome ?? "aluno"} excluído.`);
+      await atualizar();
+      onClose();
     });
   }
 
   return (
     <form onSubmit={submit} className="grid gap-4" noValidate>
       <DialogHeader>
-        <DialogTitle className="font-display text-2xl">{novo ? "Novo aluno" : "Editar aluno"}</DialogTitle>
+        <DialogTitle className="font-display text-2xl">{corrigindo ? "Corrigir cadastro" : novo ? "Novo aluno" : "Editar aluno"}</DialogTitle>
         <DialogDescription>
           {novo
             ? "Para quem não vai entrar no site. Se tiver e-mail e entrar com o Google depois, a conta é ligada a este cadastro."
@@ -181,7 +227,7 @@ function MemberForm({
       </fieldset>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <DialogFooter className="sm:justify-between">
-        {member && !member.tem_login ? (
+        {member && !member.tem_login && !member.pendente && !member.erro ? (
           // Excluir não tem volta: o primeiro clique só pede confirmação.
           <Button type="button" variant="destructive" disabled={pending} onClick={excluir}
             onBlur={() => setConfirmarExclusao(false)} className="min-h-11 md:min-h-8">
@@ -192,7 +238,7 @@ function MemberForm({
         <div className="flex flex-col-reverse gap-2 sm:flex-row">
           <Button type="button" variant="outline" onClick={onClose} className="min-h-11 md:min-h-8">Cancelar</Button>
           <Button type="submit" disabled={pending} className="min-h-11 md:min-h-8">
-            {pending ? "Salvando…" : novo ? "Cadastrar" : "Salvar"}
+            {pending ? "Salvando…" : corrigindo ? "Enviar de novo" : novo ? "Cadastrar" : "Salvar"}
           </Button>
         </div>
       </DialogFooter>
@@ -201,19 +247,19 @@ function MemberForm({
 }
 
 export function MembersTable({
-  members, plans, treinos,
-}: { members: AdminMember[]; plans: Plan[]; treinos: Treino[] }) {
-  // undefined = fechado, null = novo aluno, AdminMember = editar.
-  const [editing, setEditing] = useState<AdminMember | null | undefined>(undefined);
+  members, todos, plans, treinos,
+}: { members: MembroVisao[]; todos: MembroVisao[]; plans: Plan[]; treinos: Treino[] }) {
+  // undefined = fechado, null = novo aluno, MembroVisao = editar.
+  const [editing, setEditing] = useState<MembroVisao | null | undefined>(undefined);
 
-  const valorCell = (m: AdminMember) => (
+  const valorCell = (m: MembroVisao) => (
     <div className="flex flex-col items-start gap-0.5">
       <span>{brl(m.valor)}</span>
       {m.valor_acordado != null && <span className="text-xs text-muted-foreground">acordado</span>}
     </div>
   );
   const nomesTreino = new Map(treinos.map((t) => [t.id, t.nome]));
-  const treinoTags = (m: AdminMember) =>
+  const treinoTags = (m: MembroVisao) =>
     m.treino_ids.length > 0 && (
       <div className="mt-1 flex flex-wrap gap-1">
         {m.treino_ids.map((id) => (
@@ -223,7 +269,7 @@ export function MembersTable({
         ))}
       </div>
     );
-  const actions = (m: AdminMember) => (
+  const actions = (m: MembroVisao) => (
     <div className="flex flex-wrap justify-end gap-2">
       <Button size="sm" variant="outline" onClick={() => setEditing(m)} className="min-h-11 md:min-h-7"
         aria-label={`Editar ${m.nome ?? "aluno"}`}>
@@ -234,10 +280,16 @@ export function MembersTable({
     </div>
   );
 
-  const nomeCell = (m: AdminMember) => (
+  const nomeCell = (m: MembroVisao) => (
     <div className="flex flex-wrap items-center gap-1.5">
       <span className="font-medium">{m.nome ?? "—"}</span>
       {!m.tem_login && <Tag className="px-2 py-0.5 text-[11px]">Sem login</Tag>}
+      {m.erro ? (
+        <Tag hot className="px-2 py-0.5 text-[11px]" title={m.erro}>Erro no envio</Tag>
+      ) : m.pendente ? (
+        <Tag className="px-2 py-0.5 text-[11px]">Aguardando envio</Tag>
+      ) : null}
+      {m.pagamentoPendente && <Tag className="px-2 py-0.5 text-[11px]">Pagamento aguardando envio</Tag>}
     </div>
   );
 
@@ -323,7 +375,7 @@ export function MembersTable({
       <Dialog open={editing !== undefined} onOpenChange={(o) => !o && setEditing(undefined)}>
         <DialogContent className="max-h-[90dvh] overflow-y-auto">
           {editing !== undefined && (
-            <MemberForm key={editing?.member_id ?? "novo"} member={editing} plans={plans} treinos={treinos} onClose={() => setEditing(undefined)} />
+            <MemberForm key={editing?.member_id ?? "novo"} member={editing} plans={plans} treinos={treinos} todos={todos} onClose={() => setEditing(undefined)} />
           )}
         </DialogContent>
       </Dialog>
