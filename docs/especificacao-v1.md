@@ -41,7 +41,7 @@ A coluna `plano` (texto livre) de `members` é substituída por `plan_id`.
 
 ## Regras (impostas no banco, não só na tela)
 
-- **Pagamento:** o admin registra em `payments`. O vencimento **soma 30 dias ao vencimento atual** quando o aluno paga adiantado; se o vencimento está nulo ou já passou, conta 30 dias a partir do `pago_em`. O aluno volta a `ativo` na hora.
+- **Pagamento:** o admin registra em `payments`. O vencimento **soma 1 mês de calendário ao vencimento atual** quando o aluno paga adiantado (dia inexistente cai no último dia do mês: 31/01 → 28/02); se o vencimento está nulo ou já passou, conta 1 mês a partir do `pago_em`. O aluno volta a `ativo` na hora.
 - **Status automático:** job diário (`pg_cron`) passa para `inativo` quem está com `vencimento` vencido. O atraso nunca altera slots: o aluno inativo **mantém as vagas** e reativa ao pagar sem perder o lugar. Pendente nunca é alterado pelo job.
 - **Entrar num slot (aluno):** função com bloqueio da linha do slot (sem corrida na última vaga). Exige `status = ativo`, vaga disponível e nº de slots do aluno menor que `vezes_semana` do plano. Entrada automática, sem aprovação. Sair é livre e libera a vaga na hora.
 - **Aluno inativo:** não entra em slots novos (a regra exige `ativo`), mas continua nos atuais.

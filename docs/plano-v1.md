@@ -34,7 +34,7 @@ Pronto quando: `list_tables` mostra `plans`, `payments`, `slots`, `slot_members`
 
 Testar por SQL (com `set role`/claims de aluno e de admin), antes de confiar na tela:
 
-- Pagamento adiantado soma 30 dias ao vencimento atual; vencimento nulo ou vencido conta de `pago_em`; aluno volta a `ativo`.
+- Pagamento adiantado soma 1 mês de calendário ao vencimento atual (31/01 → 28/02); vencimento nulo ou vencido conta de `pago_em`; aluno volta a `ativo`.
 - Job diário inativa vencidos, não mexe em `pendente` e não remove vagas.
 - Entrar em slot: bloqueia na última vaga com duas chamadas concorrentes, exige `ativo` e respeita `vezes_semana`.
 - Experimental: só `pendente`, uma por pessoa, data futura, soma com fixos na capacidade, `cancel_trial` só para data futura.
