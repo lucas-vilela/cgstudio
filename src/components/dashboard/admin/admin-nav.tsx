@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { toast } from "sonner";
+import { SECOES_OFFLINE } from "@/lib/offline/secoes";
 import { cn } from "@/lib/utils";
 import { CalendarDays, LayoutTemplate, ShieldCheck, Users, Wallet } from "lucide-react";
 
@@ -16,25 +18,41 @@ const ITEMS = [
 
 // Alunos, Financeiro e Calendário são o mesmo app de cliente (funciona offline): trocar entre eles
 // só muda a URL com pushState, sem ir ao servidor. As outras abas precisam de conexão.
-const OFFLINE = new Set(["/dashboard/admin", "/dashboard/admin/financeiro", "/dashboard/admin/calendario"]);
 
 function navegar(e: React.MouseEvent<HTMLAnchorElement>, pathname: string, href: string) {
   if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-  if (OFFLINE.has(pathname) && OFFLINE.has(href)) {
+  if (SECOES_OFFLINE.has(pathname) && SECOES_OFFLINE.has(href)) {
     e.preventDefault();
     window.history.pushState(null, "", href);
   } else if (!navigator.onLine) {
     e.preventDefault();
     // Vindo de uma aba online, carrega a página inteira (o service worker serve a cópia salva).
-    if (OFFLINE.has(href)) window.location.assign(href);
+    if (SECOES_OFFLINE.has(href)) window.location.assign(href);
     else toast.warning("Esta aba precisa de conexão com a internet.");
   }
 }
 
 export function AdminNav({ pendentes = 0 }: { pendentes?: number }) {
   const pathname = usePathname();
+  const nav = useRef<HTMLElement>(null);
+  // No celular as abas não cabem: esmaece a borda direita enquanto ainda há abas para rolar.
+  const [temMais, setTemMais] = useState(false);
+  const medir = () => {
+    const el = nav.current;
+    if (el) setTemMais(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+  };
+  useEffect(() => {
+    nav.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: "nearest", inline: "center" });
+    medir();
+    window.addEventListener("resize", medir);
+    return () => window.removeEventListener("resize", medir);
+  }, [pathname]);
   return (
-    <nav aria-label="Painel do admin" className="-mx-4 overflow-x-auto px-4">
+    <nav ref={nav} onScroll={medir} aria-label="Painel do admin"
+      className={cn(
+        "-mx-4 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        temMais && "[mask-image:linear-gradient(to_right,black_80%,transparent)]",
+      )}>
       <ul className="flex w-max gap-2">
         {ITEMS.map((item) => {
           const active = pathname === item.href;

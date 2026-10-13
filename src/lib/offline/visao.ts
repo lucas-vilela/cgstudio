@@ -18,6 +18,8 @@ export type Visao = {
   slots: SlotVisao[];
   pagamentos: PagamentoVisao[];
   plans: Plan[];
+  // Alunos com pagamento aguardando envio (marca nas listas que vêm prontas do servidor).
+  pagamentosPendentes: Set<string>;
 };
 
 const marca = (i: ItemFila): Marca => (i.status === "erro" ? { erro: i.erro } : { pendente: true });
@@ -131,5 +133,6 @@ export function montarVisao(snapshot: AdminSnapshot, fila: ItemFila[]): Visao {
     slots,
     pagamentos: [...pagamentos, ...snapshot.pagamentos],
     plans,
+    pagamentosPendentes: new Set(fila.filter((i) => i.tipo === "pagamento").map((i) => i.payload.member_id)),
   };
 }

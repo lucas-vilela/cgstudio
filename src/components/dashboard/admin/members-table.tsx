@@ -104,8 +104,13 @@ export function MemberForm({
         nome: nome.trim(), telefone: tel, email: mail,
         plan_id: plano, valor_acordado: parsed, treino_ids: treinoIds,
       };
-      if (corrigindo) await corrigir(corrigindo.id, payload);
-      else await enfileirar({ tipo: "aluno_criar", payload });
+      const guardou = corrigindo
+        ? await corrigir(corrigindo.id, payload)
+        : (await enfileirar({ tipo: "aluno_criar", payload })) !== null;
+      if (!guardou) {
+        setPending(false);
+        return setError("Não foi possível guardar neste aparelho. Tente de novo; se continuar, recarregue a página.");
+      }
       toast.success(msgGuardado(online, `${payload.nome} cadastrado(a)`));
     } else {
       // Só os campos que mudaram: não desfaz o que outro admin ou a rotina diária mudou.
@@ -120,7 +125,10 @@ export function MemberForm({
         if (mail !== (member.email?.toLowerCase() ?? null)) campos.email = mail;
       }
       if (Object.keys(campos).length) {
-        await enfileirar({ tipo: "aluno_editar", payload: { member_id: member.member_id, campos } });
+        if (!(await enfileirar({ tipo: "aluno_editar", payload: { member_id: member.member_id, campos } }))) {
+          setPending(false);
+          return setError("Não foi possível guardar neste aparelho. Tente de novo; se continuar, recarregue a página.");
+        }
         toast.success(msgGuardado(online, `Alterações de ${member.nome ?? "aluno"} salvas`));
       }
     }
@@ -276,7 +284,7 @@ export function MembersTable({
         <Pencil data-icon="inline-start" />
         Editar
       </Button>
-      <RegisterPaymentButton member={{ id: m.member_id, nome: m.nome, valor: m.valor }} label="Registrar" />
+      <RegisterPaymentButton member={{ id: m.member_id, nome: m.nome, valor: m.valor, pendente: m.pagamentoPendente }} label="Registrar" />
     </div>
   );
 

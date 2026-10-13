@@ -55,7 +55,7 @@ export function StatusConexao({ visao }: { visao: Visao | null }) {
           {comErro} com erro
         </a>
       )}
-      <div className="ml-auto flex flex-wrap gap-2">
+      <div className="flex w-full flex-wrap gap-2 sm:ml-auto sm:w-auto">
       <Button size="sm" variant="outline" className="min-h-11 md:min-h-7" disabled={!visao || exportando}
         onClick={() => void exportar()}>
         <FileSpreadsheet data-icon="inline-start" />

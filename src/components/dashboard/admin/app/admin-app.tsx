@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { iniciar } from "@/lib/offline/store";
+import { iniciar, iniciarSemUsuario } from "@/lib/offline/store";
 import { useAdminEstado, useVisao } from "@/lib/offline/use-admin";
 import { PageLoading } from "../page-loading";
 import { AlunosSecao } from "./alunos-secao";
@@ -11,23 +11,48 @@ import { FinanceiroSecao } from "./financeiro-secao";
 import { Pendencias } from "./pendencias";
 import { StatusConexao } from "./status-conexao";
 
-// Seções do admin que funcionam offline. As três rotas renderizam este mesmo componente; a troca
-// entre elas usa history.pushState (ver AdminNav), sem buscar nada no servidor.
-export const SECOES_OFFLINE = ["/dashboard/admin", "/dashboard/admin/financeiro", "/dashboard/admin/calendario"];
+// Alunos, Financeiro e Calendário (SECOES_OFFLINE): as três rotas renderizam este componente,
+// que lê os dados do aparelho e sincroniza com o servidor.
+const ULTIMO_USUARIO = "cg-admin-ultimo-usuario";
 
-export function AdminApp({ userId }: { userId: string }) {
+function lerUltimoUsuario() {
+  try {
+    return localStorage.getItem(ULTIMO_USUARIO);
+  } catch {
+    return null;
+  }
+}
+
+// Chamado pela checagem de admin do servidor (UsuarioDoServidor) com o usuário confirmado.
+export function definirUsuario(id: string) {
+  try {
+    localStorage.setItem(ULTIMO_USUARIO, id);
+  } catch {
+    // armazenamento indisponível
+  }
+  void iniciar(id);
+}
+
+// Fica na casca fixa da página (fora do Suspense do servidor) para abrir na hora, também offline.
+// Começa com o último admin deste aparelho; a checagem do servidor confirma (ou troca) o usuário.
+// Nada aqui chama o login do Supabase no navegador: renovar o token em dois lugares ao mesmo
+// tempo pode derrubar a sessão.
+export function AdminApp() {
   const pathname = usePathname();
   const estado = useAdminEstado();
   const visao = useVisao();
 
   useEffect(() => {
-    void iniciar(userId);
-  }, [userId]);
+    const id = lerUltimoUsuario();
+    if (id) void iniciar(id);
+    else iniciarSemUsuario();
+  }, []);
 
   let conteudo: React.ReactNode;
   if (!visao) {
+    const semDados = estado.carregado && !estado.online;
     conteudo =
-      estado.carregado && !estado.online ? (
+      semDados ? (
         <p role="status" className="rounded-xl border border-border bg-surface p-4 text-sm text-muted-foreground">
           Ainda não há dados salvos neste aparelho. Conecte-se à internet uma vez para baixar.
         </p>

@@ -19,7 +19,7 @@ export async function GET() {
   try {
     const [members, plans, treinos, slots, resumo, vencimentos, inadimplentes, pagamentos] =
       await Promise.all([
-        getAdminMembers(""), getPlans(), getTreinos(), getSlots(), getResumo(),
+        getAdminMembers(), getPlans(), getTreinos(), getSlots(), getResumo(),
         getVencimentosProximos(), getInadimplentes(), getPagamentosDesde(desde),
       ]);
     const snapshot: AdminSnapshot = {

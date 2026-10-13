@@ -33,7 +33,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(r, { headers: semCache });
   } catch (e) {
     console.error("[api/admin/acoes]", e);
-    const r: RespostaAcao = { ok: false, tipo: "temporario", mensagem: "Falha no servidor. Vai tentar de novo." };
-    return NextResponse.json(r, { status: 500, headers: semCache });
+    // Dado em formato inesperado (ex.: app instalado com versão antiga) não adianta repetir:
+    // vira pendência para o admin decidir. Outras falhas o app tenta de novo.
+    const r: RespostaAcao =
+      e instanceof TypeError
+        ? { ok: false, tipo: "regra", mensagem: "Registro em formato inválido. Descarte e registre de novo." }
+        : { ok: false, tipo: "temporario", mensagem: "Falha no servidor. Vai tentar de novo." };
+    return NextResponse.json(r, { status: e instanceof TypeError ? 400 : 500, headers: semCache });
   }
 }

@@ -60,11 +60,19 @@ async function paginaRedePrimeiro(req, url) {
   }
 }
 
+// Cada deploy traz arquivos novos (nomes com hash). Mantém só os mais recentes para o cache não
+// crescer para sempre e o navegador não precisar despejar o armazenamento do site (onde está a fila).
+const MAX_ESTATICOS = 150;
+
 async function estaticoCachePrimeiro(req) {
   const cache = await caches.open(ESTATICOS);
   const salvo = await cache.match(req);
   if (salvo) return salvo;
   const res = await fetch(req);
-  if (res.ok) cache.put(req, res.clone());
+  if (res.ok) {
+    await cache.put(req, res.clone());
+    const chaves = await cache.keys(); // em ordem de inserção
+    await Promise.all(chaves.slice(0, Math.max(0, chaves.length - MAX_ESTATICOS)).map((k) => cache.delete(k)));
+  }
   return res;
 }

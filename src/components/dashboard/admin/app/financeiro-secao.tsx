@@ -42,7 +42,7 @@ export function FinanceiroSecao({ visao }: { visao: Visao }) {
         <h1 className="text-4xl">Financeiro</h1>
         <nav aria-label="Mês" className="flex items-center gap-2">
           <Button variant="outline" className={navBtn} aria-label="Mês anterior" onClick={() => setYm(shiftMonth(ym, -1))}>‹</Button>
-          <span className="min-w-36 text-center text-sm font-semibold capitalize">{monthLabel(ym)}</span>
+          <span className="min-w-36 text-center text-sm font-semibold first-letter:uppercase">{monthLabel(ym)}</span>
           <Button variant="outline" className={navBtn} aria-label="Próximo mês" onClick={() => setYm(shiftMonth(ym, 1))}>›</Button>
         </nav>
       </div>
@@ -61,7 +61,7 @@ export function FinanceiroSecao({ visao }: { visao: Visao }) {
       <Panel aria-labelledby="inad-title">
         <h2 id="inad-title" className="text-3xl">Inadimplentes</h2>
         <p className="mb-3 text-sm text-muted-foreground">Alunos com vencimento passado (não conta pendentes).</p>
-        <InadimplentesTable items={visao.snapshot.inadimplentes} />
+        <InadimplentesTable items={visao.snapshot.inadimplentes} pendentes={visao.pagamentosPendentes} />
       </Panel>
 
       <Panel aria-labelledby="hist-title">

@@ -60,16 +60,16 @@ async function alunoCriar(sb: Supabase, p: Extract<AcaoFila, { tipo: "aluno_cria
   if (p.valor_acordado != null && !(p.valor_acordado >= 0)) return regra("Valor inválido.");
   if (!idsValidos(p.treino_ids)) return regra("Treino inválido.");
 
-  const { error } = await sb.from("members").insert({
-    id: p.member_id,
-    ...dados.data,
-    plan_id: p.plan_id,
-    valor_acordado: p.valor_acordado,
-    status: "pendente",
-  });
-  // Mesmo id já gravado = reenvio do mesmo item: segue para os treinos (idempotente).
-  if (error && !(error.code === "23505" && error.message?.includes("members_pkey")))
-    return traduz(error, "Não foi possível cadastrar o aluno.");
+  const campos = { ...dados.data, plan_id: p.plan_id, valor_acordado: p.valor_acordado };
+  const { error } = await sb.from("members").insert({ id: p.member_id, ...campos, status: "pendente" });
+  if (error) {
+    if (!(error.code === "23505" && error.message?.includes("members_pkey")))
+      return traduz(error, "Não foi possível cadastrar o aluno.");
+    // Mesmo id já gravado = reenvio (talvez corrigido em Pendências): aplica os dados enviados
+    // agora, sem mexer no status. Só vale para cadastro sem login (o feito pelo admin).
+    const { error: upErr } = await sb.from("members").update(campos).eq("id", p.member_id).is("auth_user_id", null);
+    if (upErr) return traduz(upErr, "Não foi possível atualizar o cadastro.");
+  }
 
   if (p.treino_ids.length) {
     const tErr = await salvarTreinos(sb, p.member_id, p.treino_ids);

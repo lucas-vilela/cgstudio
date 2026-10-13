@@ -17,7 +17,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { FieldSelect } from "./field-select";
 import { Banknote } from "lucide-react";
 
-export type PaymentTarget = { id: string; nome: string | null; valor: number | null };
+// `pendente`: já há um pagamento deste aluno aguardando envio (evita registrar em dobro).
+export type PaymentTarget = { id: string; nome: string | null; valor: number | null; pendente?: boolean };
 
 function PaymentForm({
   member, onClose, corrigindo,
@@ -50,9 +51,11 @@ function PaymentForm({
     const payload = {
       member_id: member.id, forma, valor: parsed, pago_em: data, observacao: obs.trim() || null,
     };
-    if (corrigindo) await corrigir(corrigindo.id, payload);
-    else await enfileirar({ tipo: "pagamento", payload });
+    const guardou = corrigindo
+      ? await corrigir(corrigindo.id, payload)
+      : (await enfileirar({ tipo: "pagamento", payload })) !== null;
     setPending(false);
+    if (!guardou) return setError("Não foi possível guardar neste aparelho. Tente de novo; se continuar, recarregue a página.");
     toast.success(msgGuardado(online, `Pagamento de ${member.nome ?? "aluno"} registrado`));
     onClose();
   }
@@ -63,6 +66,12 @@ function PaymentForm({
         <DialogTitle className="font-display text-2xl">Registrar pagamento</DialogTitle>
         <DialogDescription>{member.nome ?? "Aluno"}</DialogDescription>
       </DialogHeader>
+      {member.pendente && !corrigindo && (
+        <p role="alert" className="rounded-lg border border-accent/60 p-3 text-sm">
+          Já existe um pagamento de {member.nome ?? "este aluno"} aguardando envio. Só registre outro se for
+          mesmo um segundo pagamento.
+        </p>
+      )}
       <div className="grid gap-1.5">
         <Label htmlFor="pg-valor">Valor (R$)</Label>
         <Input id="pg-valor" inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)}

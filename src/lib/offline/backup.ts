@@ -3,6 +3,7 @@ import type { Cell, Row } from "write-excel-file/browser";
 import { DIAS, formatDate, hhmm, todayISO } from "@/app/dashboard/admin/format";
 import { formaLabel } from "@/app/dashboard/admin/types";
 import { formatPhone, statusLabel } from "@/app/dashboard/members";
+import { descreverItem } from "./descricao";
 import type { ItemFila } from "./tipos";
 import type { Visao } from "./visao";
 
@@ -12,17 +13,6 @@ import type { Visao } from "./visao";
 const titulo = (t: string): Cell => ({ value: t, fontWeight: "bold" });
 const dinheiro = (v: number | null): Cell => (v == null ? null : { value: v, type: Number, format: "#,##0.00" });
 const txt = (v: string | null | undefined): Cell => v ?? "";
-
-function descreverFila(i: ItemFila, visao: Visao) {
-  const nome = (id: string) => visao.members.find((m) => m.member_id === id)?.nome ?? "aluno";
-  switch (i.tipo) {
-    case "pagamento": return `Pagamento de ${nome(i.payload.member_id)} em ${formatDate(i.payload.pago_em)}`;
-    case "aluno_criar": return `Cadastro de ${i.payload.nome}`;
-    case "aluno_editar": return `Alteração de ${nome(i.payload.member_id)}`;
-    case "horario_entrar": return `${nome(i.payload.member_id)} entrar em horário`;
-    case "horario_sair": return `${nome(i.payload.member_id)} sair de horário`;
-  }
-}
 
 export async function exportarPlanilha(visao: Visao, fila: ItemFila[]) {
   const treinoNome = new Map(visao.snapshot.treinos.map((t) => [t.id, t.nome]));
@@ -73,7 +63,7 @@ export async function exportarPlanilha(visao: Visao, fila: ItemFila[]) {
         [titulo("Atenção: estes registros ainda não chegaram ao servidor.")],
         ["Registrado em", "O quê", "Situação"].map(titulo),
         ...pendentes.map((i): Row => [
-          new Date(i.criado_em).toLocaleString("pt-BR"), descreverFila(i, visao), i.erro ? `Erro: ${i.erro}` : "Aguardando envio",
+          new Date(i.criado_em).toLocaleString("pt-BR"), descreverItem(i, visao), i.erro ? `Erro: ${i.erro}` : "Aguardando envio",
         ]),
       ],
       columns: [{ width: 20 }, { width: 50 }, { width: 50 }],

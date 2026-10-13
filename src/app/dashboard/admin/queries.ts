@@ -13,9 +13,6 @@ import type {
   Vencimento,
 } from "./types";
 
-// Remove caracteres que quebram a sintaxe de filtro .or() do PostgREST.
-const sanitize = (q: string) => q.trim().replace(/[%,()*\\]/g, " ").trim();
-
 function check<T>(res: { data: T | null; error: { message: string } | null }, what: string) {
   if (res.error) throw new Error(`${what}: ${res.error.message}`);
   return res.data as T;
@@ -67,56 +64,47 @@ export async function getVencimentosProximos(): Promise<Vencimento[]> {
   return rows.map((r: Vencimento) => ({ ...r, valor: r.valor == null ? null : num(r.valor) }));
 }
 
-// Lê member_treinos em páginas: o PostgREST corta cada resposta no max-rows (1000), e uma lista
-// incompleta faria o "Salvar" do aluno apagar ligações que não vieram.
-async function getTodasLigacoesTreino(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const PAGINA = 1000;
-  const todas: { member_id: string; treino_id: number }[] = [];
-  for (let de = 0; ; de += PAGINA) {
-    const page = check(
-      await supabase
-        .from("member_treinos")
-        .select("member_id,treino_id")
-        .order("member_id")
-        .order("treino_id")
-        .range(de, de + PAGINA - 1),
-      "member_treinos",
-    ) as { member_id: string; treino_id: number }[];
-    todas.push(...page);
-    if (page.length < PAGINA) return todas;
+// Lê todas as linhas em páginas: o PostgREST corta cada resposta no max-rows (1000). Lista
+// incompleta aqui faria alunos "sumirem" do app offline e o Salvar apagar treinos que não vieram.
+async function todasAsPaginas<T>(
+  pagina: (de: number, ate: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+  oQue: string,
+): Promise<T[]> {
+  const TAM = 1000;
+  const out: T[] = [];
+  for (let de = 0; de < 100_000; de += TAM) {
+    const rows = check(await pagina(de, de + TAM - 1), oQue) as T[];
+    out.push(...rows);
+    if (rows.length < TAM) break;
   }
+  return out;
 }
 
-export async function getAdminMembers(query: string): Promise<AdminMember[]> {
+// Todos os alunos com situação financeira, treinos e se têm login (snapshot do app do admin).
+export async function getAdminMembers(): Promise<AdminMember[]> {
   const supabase = await createClient();
-  let req = supabase.from("member_financeiro").select("*").order("nome").limit(500);
-  const q = sanitize(query);
-  if (q) {
-    const digits = q.replace(/\D/g, "");
-    const parts = [`nome.ilike.%${q}%`, `email.ilike.%${q}%`];
-    if (digits.length >= 3) parts.push(`telefone.ilike.%${digits}%`);
-    req = req.or(parts.join(","));
-  }
-  const [fin, acordados, ligacoes] = await Promise.all([
-    req,
-    supabase.from("members").select("id,valor_acordado,auth_user_id"),
-    getTodasLigacoesTreino(supabase),
+  const [rows, extras, ligacoes] = await Promise.all([
+    todasAsPaginas<AdminMember>(
+      (de, ate) => supabase.from("member_financeiro").select("*").order("nome").order("member_id").range(de, ate),
+      "member_financeiro",
+    ),
+    todasAsPaginas<{ id: string; valor_acordado: number | null; auth_user_id: string | null }>(
+      (de, ate) => supabase.from("members").select("id,valor_acordado,auth_user_id").order("id").range(de, ate),
+      "members",
+    ),
+    todasAsPaginas<{ member_id: string; treino_id: number }>(
+      (de, ate) =>
+        supabase.from("member_treinos").select("member_id,treino_id").order("member_id").order("treino_id").range(de, ate),
+      "member_treinos",
+    ),
   ]);
-  const rows = check(fin, "member_financeiro");
-  const extras = check(acordados, "members") as {
-    id: string;
-    valor_acordado: number | null;
-    auth_user_id: string | null;
-  }[];
   const acordado = new Map<string, number>(
     extras.filter((m) => m.valor_acordado != null).map((m) => [m.id, num(m.valor_acordado)]),
   );
   const semLogin = new Set(extras.filter((m) => !m.auth_user_id).map((m) => m.id));
   const treinos = new Map<string, number[]>();
-  for (const l of ligacoes) {
-    treinos.set(l.member_id, [...(treinos.get(l.member_id) ?? []), l.treino_id]);
-  }
-  return rows.map((r: AdminMember) => ({
+  for (const l of ligacoes) treinos.set(l.member_id, [...(treinos.get(l.member_id) ?? []), l.treino_id]);
+  return rows.map((r) => ({
     ...r,
     valor: r.valor == null ? null : num(r.valor),
     valor_acordado: acordado.get(r.member_id) ?? null,

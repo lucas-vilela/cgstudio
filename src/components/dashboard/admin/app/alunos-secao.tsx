@@ -26,7 +26,7 @@ export function AlunosSecao({ visao }: { visao: Visao }) {
     <div className="flex flex-col gap-6">
       <h1 className="text-4xl">Alunos</h1>
       <SummaryCards {...visao.snapshot.resumo} />
-      <VencimentosProximos items={visao.snapshot.vencimentos} />
+      <VencimentosProximos items={visao.snapshot.vencimentos} pendentes={visao.pagamentosPendentes} />
       <Panel aria-labelledby="alunos-title">
         <div className="mb-4 flex flex-col gap-3">
           <div>

@@ -8,7 +8,8 @@ import { RegisterPaymentButton } from "./register-payment-dialog";
 import { EmptyNote } from "./section";
 import { Tag } from "./tag";
 
-export function InadimplentesTable({ items }: { items: Inadimplente[] }) {
+// `pendentes`: alunos com pagamento aguardando envio (a lista vem do servidor e ainda não sabe dele).
+export function InadimplentesTable({ items, pendentes }: { items: Inadimplente[]; pendentes?: Set<string> }) {
   if (!items.length) return <EmptyNote>Nenhum aluno em atraso.</EmptyNote>;
   return (
     <Table>
@@ -26,6 +27,7 @@ export function InadimplentesTable({ items }: { items: Inadimplente[] }) {
           <TableRow key={i.member_id}>
             <TableCell>
               <div className="font-medium">{i.nome ?? "—"}</div>
+              {pendentes?.has(i.member_id) && <Tag className="mt-1">Pagamento aguardando envio</Tag>}
               <div className="text-xs text-muted-foreground">{i.plano_nome ?? "Sem plano"}</div>
             </TableCell>
             <TableCell className="hidden text-muted-foreground md:table-cell">
@@ -41,7 +43,7 @@ export function InadimplentesTable({ items }: { items: Inadimplente[] }) {
             <TableCell className="text-right">
               <RegisterPaymentButton
                 label="Registrar"
-                member={{ id: i.member_id, nome: i.nome, valor: i.valor_devido }}
+                member={{ id: i.member_id, nome: i.nome, valor: i.valor_devido, pendente: pendentes?.has(i.member_id) }}
               />
             </TableCell>
           </TableRow>

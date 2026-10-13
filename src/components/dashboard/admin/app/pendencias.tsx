@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Pencil, RotateCw, Trash2 } from "lucide-react";
-import { brl, DIAS, formatDate, hhmm } from "@/app/dashboard/admin/format";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { descreverItem } from "@/lib/offline/descricao";
 import { descartar, tentarDeNovo } from "@/lib/offline/store";
 import type { ItemFila } from "@/lib/offline/tipos";
 import { useAdminEstado } from "@/lib/offline/use-admin";
@@ -14,30 +14,12 @@ import { MemberForm } from "../members-table";
 import { PaymentForm } from "../register-payment-dialog";
 import { Panel } from "../section";
 
-function descrever(item: ItemFila, visao: Visao) {
-  const nome = (id: string) => visao.members.find((m) => m.member_id === id)?.nome ?? "aluno";
-  switch (item.tipo) {
-    case "pagamento":
-      return `Pagamento de ${nome(item.payload.member_id)} · ${item.payload.valor != null ? brl(item.payload.valor) : "valor do plano"} em ${formatDate(item.payload.pago_em)}`;
-    case "aluno_criar":
-      return `Cadastro de ${item.payload.nome}`;
-    case "aluno_editar":
-      return `Alteração de ${nome(item.payload.member_id)}`;
-    case "horario_entrar":
-    case "horario_sair": {
-      const s = visao.slots.find((x) => x.slot_id === item.payload.slot_id);
-      const h = s ? `${DIAS[s.dia_semana]} ${hhmm(s.hora_inicio)}` : "horário";
-      return `${nome(item.payload.member_id)} ${item.tipo === "horario_entrar" ? "entrar em" : "sair de"} ${h}`;
-    }
-  }
-}
-
 function Linha({ item, visao, onCorrigir }: { item: ItemFila; visao: Visao; onCorrigir: () => void }) {
   const [confirmar, setConfirmar] = useState(false);
   const corrigivel = item.tipo === "pagamento" || item.tipo === "aluno_criar";
   return (
     <li className="rounded-xl border border-accent/50 bg-surface-2 p-4">
-      <p className="font-medium">{descrever(item, visao)}</p>
+      <p className="font-medium">{descreverItem(item, visao)}</p>
       <p className="mt-1 text-sm text-accent">{item.erro}</p>
       <p className="text-xs text-muted-foreground">Registrado em {new Date(item.criado_em).toLocaleString("pt-BR")}</p>
       <div className="mt-3 flex flex-wrap gap-2">

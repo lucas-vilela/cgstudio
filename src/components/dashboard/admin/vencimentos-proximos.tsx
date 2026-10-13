@@ -7,7 +7,7 @@ import { RegisterPaymentButton } from "./register-payment-dialog";
 import { EmptyNote, Panel } from "./section";
 import { Tag } from "./tag";
 
-export function VencimentosProximos({ items }: { items: Vencimento[] }) {
+export function VencimentosProximos({ items, pendentes }: { items: Vencimento[]; pendentes?: Set<string> }) {
   return (
     <Panel aria-labelledby="venc-title">
       <h2 id="venc-title" className="text-3xl">Vencimentos próximos</h2>
@@ -27,7 +27,10 @@ export function VencimentosProximos({ items }: { items: Vencimento[] }) {
           <TableBody>
             {items.map((v) => (
               <TableRow key={v.member_id}>
-                <TableCell className="font-medium">{v.nome ?? "—"}</TableCell>
+                <TableCell className="font-medium">
+                  {v.nome ?? "—"}
+                  {pendentes?.has(v.member_id) && <Tag className="mt-1 block w-fit">Pagamento aguardando envio</Tag>}
+                </TableCell>
                 <TableCell>{v.plano_nome ?? "—"}</TableCell>
                 <TableCell>
                   <div className="flex flex-col items-start gap-1">
@@ -38,7 +41,7 @@ export function VencimentosProximos({ items }: { items: Vencimento[] }) {
                 <TableCell className="text-right">
                   <RegisterPaymentButton
                     label="Registrar"
-                    member={{ id: v.member_id, nome: v.nome, valor: v.valor }}
+                    member={{ id: v.member_id, nome: v.nome, valor: v.valor, pendente: pendentes?.has(v.member_id) }}
                   />
                 </TableCell>
               </TableRow>

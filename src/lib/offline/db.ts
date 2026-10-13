@@ -10,12 +10,20 @@ interface CgDB extends DBSchema {
 
 let dbPromise: Promise<IDBPDatabase<CgDB>> | null = null;
 
+// Falha ao abrir ou conexão encerrada pelo navegador: esquece a promessa para tentar de novo
+// na próxima chamada (sem isto, tudo falharia até recarregar a página).
 export function abrirDB() {
   dbPromise ??= openDB<CgDB>("cgstudio-admin", 1, {
     upgrade(db) {
       db.createObjectStore("snapshot");
       db.createObjectStore("fila", { keyPath: "id" }).createIndex("por_usuario", "user_id");
     },
+    terminated() {
+      dbPromise = null;
+    },
+  }).catch((e) => {
+    dbPromise = null;
+    throw e;
   });
   return dbPromise;
 }

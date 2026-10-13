@@ -99,7 +99,8 @@ function SlotAlunos({
 
   // Admin pode tudo (decisão do dono): só avisa, não bloqueia.
   async function adicionar(m: MembroVisao) {
-    await enfileirar({ tipo: "horario_entrar", payload: { slot_id: slot.slot_id, member_id: m.member_id } });
+    if (!(await enfileirar({ tipo: "horario_entrar", payload: { slot_id: slot.slot_id, member_id: m.member_id } })))
+      return void toast.error("Não foi possível guardar neste aparelho. Tente de novo.");
     const avisos: string[] = [];
     if (slot.ocupados + 1 > slot.capacidade) avisos.push("o horário ficou acima da capacidade");
     if (m.vezes_semana != null && m.slots_usados + 1 > m.vezes_semana)
@@ -111,7 +112,8 @@ function SlotAlunos({
   }
 
   async function remover(a: SlotVisao["alunos"][number]) {
-    await enfileirar({ tipo: "horario_sair", payload: { slot_id: slot.slot_id, member_id: a.member_id } });
+    if (!(await enfileirar({ tipo: "horario_sair", payload: { slot_id: slot.slot_id, member_id: a.member_id } })))
+      return void toast.error("Não foi possível guardar neste aparelho. Tente de novo.");
     toast.success(msgGuardado(online, `${a.nome ?? "Aluno"} removido(a) do horário`));
   }
 
