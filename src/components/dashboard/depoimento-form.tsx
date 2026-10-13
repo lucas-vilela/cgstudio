@@ -50,7 +50,7 @@ export function DepoimentoForm({
             : "Só alunos com matrícula ativa podem enviar ou editar depoimento. Fale com a recepção."}
         </CardDescription>
       </CardHeader>
-      <form action={action} noValidate>
+      <form action={action} noValidate className="flex flex-col gap-(--card-spacing)">
         <CardContent className="flex flex-col gap-3">
           {/* Os textos de estado falam em editar: para quem não pode editar, só o selo basta. */}
           {estado && ativo && <p className="text-sm text-muted-foreground">{estado.texto}</p>}

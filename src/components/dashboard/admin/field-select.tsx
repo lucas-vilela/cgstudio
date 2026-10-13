@@ -29,7 +29,7 @@ export function FieldSelect({
       onValueChange={(v) => v != null && onValueChange(String(v))}
       disabled={disabled}
     >
-      <SelectTrigger id={id} aria-label={ariaLabel} className="h-10 w-full md:h-8">
+      <SelectTrigger id={id} aria-label={ariaLabel} className="w-full data-[size=default]:h-10 md:data-[size=default]:h-8">
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>

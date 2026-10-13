@@ -20,7 +20,7 @@ export function ConteudoTabs({
   const trigger = "min-h-11 px-4 md:min-h-7";
   return (
     <Tabs defaultValue="planos" className="gap-4">
-      <TabsList className="h-auto flex-wrap justify-start">
+      <TabsList className="grid w-full grid-cols-2 group-data-horizontal/tabs:h-auto sm:flex sm:w-fit">
         <TabsTrigger value="planos" className={trigger}>Planos</TabsTrigger>
         <TabsTrigger value="treinos" className={trigger}>Treinos</TabsTrigger>
         <TabsTrigger value="depoimentos" className={trigger}>

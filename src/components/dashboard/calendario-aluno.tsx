@@ -118,19 +118,17 @@ export function CalendarioAluno({ slots, financeiro, meusSlotIds, experimental, 
                       type="button"
                       aria-pressed={ativo}
                       onClick={() => setDiaMobile(d.dow)}
-                      className={`flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-xl border text-xs font-semibold uppercase tracking-wider outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                      className={`relative flex min-h-11 items-center justify-center rounded-xl border text-xs font-semibold uppercase tracking-wider outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                         ativo ? "border-foreground bg-foreground text-background" : "border-border bg-surface-2 text-muted-foreground"
                       }`}
                     >
                       {d.curto}
                       {temMeu ? (
                         <>
-                          <Halter className={ativo ? "text-accent" : "text-accent"} />
+                          <Halter className="absolute top-1.5 right-1.5 text-accent" />
                           <span className="sr-only">: você tem horário neste dia</span>
                         </>
-                      ) : (
-                        <span className="h-[13px]" aria-hidden />
-                      )}
+                      ) : null}
                     </button>
                   );
                 })}
@@ -164,7 +162,7 @@ export function CalendarioAluno({ slots, financeiro, meusSlotIds, experimental, 
 
         <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-[13px] text-muted-foreground" aria-label="Legenda">
           <li className="flex items-center gap-1.5">
-            <i className="size-2.5 rounded-[3px] bg-accent" /> Seu horário
+            <i className="size-2.5 rounded-[3px] border border-white" /> Seu horário
           </li>
           <li className="flex items-center gap-1.5">
             <i className="size-2.5 rounded-[3px] border border-border bg-surface-2" /> Com vaga

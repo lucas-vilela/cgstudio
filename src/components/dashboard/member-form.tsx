@@ -49,7 +49,7 @@ export function MemberForm({ member }: { member: Member | null }) {
           Mantenha seu nome e telefone atualizados. Plano e status são alterados pela recepção.
         </CardDescription>
       </CardHeader>
-      <form action={action} noValidate>
+      <form action={action} noValidate className="flex flex-col gap-(--card-spacing)">
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <label htmlFor="nome" className="text-sm font-medium">Nome completo</label>

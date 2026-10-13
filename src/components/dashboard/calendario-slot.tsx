@@ -30,7 +30,7 @@ export function CalendarioSlot({ slot, meu, gratisEm, podeEntrar, semBotaoEntrar
       className={[
         "flex min-h-16 flex-col gap-2 rounded-xl border p-3 text-sm transition-colors",
         meu
-          ? "border-accent bg-accent text-white"
+          ? "border-white bg-surface-2 text-white"
           : "border-border bg-surface-2 " + (lotado ? "opacity-45" : "hover:border-accent"),
       ].join(" ")}
       data-state={meu ? "meu" : lotado ? "lotado" : "livre"}
@@ -39,7 +39,7 @@ export function CalendarioSlot({ slot, meu, gratisEm, podeEntrar, semBotaoEntrar
       <span className="flex items-center gap-1.5 font-semibold">
         {meu ? (
           <>
-            <Halter /> Seu horário
+            <Halter className="text-accent" /> Seu horário
           </>
         ) : (
           vagasTxt

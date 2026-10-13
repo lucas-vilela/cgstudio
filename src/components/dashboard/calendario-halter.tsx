@@ -1,4 +1,4 @@
-// Halter da marca como máscara: herda a cor do texto (branco sobre o vermelho do "seu horário").
+// Halter da marca como máscara: herda a cor do texto (no "seu horário" recebe text-accent).
 export function Halter({ className = "" }: { className?: string }) {
   const mask = "url(/brand/halter-limpo.svg) center / contain no-repeat";
   return (

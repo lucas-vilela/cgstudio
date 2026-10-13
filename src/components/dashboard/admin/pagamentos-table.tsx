@@ -21,7 +21,7 @@ export function PagamentosTable({
         <TableRow>
           <TableHead>Data</TableHead>
           <TableHead>Aluno</TableHead>
-          <TableHead>Forma</TableHead>
+          <TableHead className="hidden sm:table-cell">Forma</TableHead>
           <TableHead className="text-right">Valor</TableHead>
           <TableHead className="hidden md:table-cell">Observação</TableHead>
         </TableRow>
@@ -31,7 +31,7 @@ export function PagamentosTable({
           return (
             <TableRow key={p.fila_id ?? p.id}>
               <TableCell>{formatDate(p.pago_em)}</TableCell>
-              <TableCell className="font-medium">
+              <TableCell className="font-medium whitespace-normal">
                 <div className="flex flex-wrap items-center gap-1.5">
                   {onAluno ? (
                     <button type="button" onClick={() => onAluno(p.member_id)}
@@ -44,8 +44,12 @@ export function PagamentosTable({
                   {p.erro ? <Tag hot title={p.erro}>Erro no envio</Tag> : p.pendente ? <Tag>Aguardando envio</Tag> : null}
                 </div>
               </TableCell>
-              <TableCell>{formaLabel(p.forma)}</TableCell>
-              <TableCell className="text-right">{brl(p.valor)}</TableCell>
+              <TableCell className="hidden sm:table-cell">{formaLabel(p.forma)}</TableCell>
+              <TableCell className="text-right">
+                {brl(p.valor)}
+                {/* Celular: a forma vem embaixo do valor, sem coluna própria. */}
+                <span className="block text-xs text-muted-foreground sm:hidden">{formaLabel(p.forma)}</span>
+              </TableCell>
               <TableCell className="hidden max-w-64 truncate text-muted-foreground md:table-cell">
                 {p.observacao ?? "—"}
               </TableCell>

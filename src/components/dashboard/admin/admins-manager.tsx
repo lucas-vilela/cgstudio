@@ -57,7 +57,7 @@ export function AdminsManager({
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <Panel aria-labelledby="adm-list">
         <h2 id="adm-list" className="mb-3 text-3xl">Admins</h2>
         {admins.length === 0 ? (
