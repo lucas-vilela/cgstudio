@@ -14,7 +14,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { Anamnese } from "@/lib/anamnese";
+import { AlertaIcone } from "./ficha/alerta";
 import { FieldSelect } from "./field-select";
+import { LinkAluno } from "./link-aluno";
 import { EmptyNote } from "./section";
 import { Tag } from "./tag";
 import { Pencil, Plus, Power, PowerOff, Search, UserMinus, UserPlus, Users } from "lucide-react";
@@ -83,8 +86,8 @@ function SlotForm({ slot, onClose }: { slot: SlotVisao | null; onClose: () => vo
 }
 
 function SlotAlunos({
-  slot, members, onClose,
-}: { slot: SlotVisao; members: MembroVisao[]; onClose: () => void }) {
+  slot, members, anamneses, onClose,
+}: { slot: SlotVisao; members: MembroVisao[]; anamneses?: Map<string, Anamnese>; onClose: () => void }) {
   const { online } = useAdminEstado();
   const [busca, setBusca] = useState("");
   const noHorario = new Set(slot.alunos.map((a) => a.member_id));
@@ -166,7 +169,8 @@ function SlotAlunos({
             <li key={a.member_id} className="flex items-center justify-between gap-2 rounded-lg border border-border bg-surface-2 px-3 py-2">
               <div className="min-w-0">
                 <p className="flex flex-wrap items-center gap-1.5 truncate font-medium">
-                  {a.nome ?? "—"}
+                  <LinkAluno id={a.member_id}>{a.nome ?? "—"}</LinkAluno>
+                  <AlertaIcone anamnese={anamneses?.get(a.member_id)} />
                   {a.erro ? <Tag hot title={a.erro}>Erro no envio</Tag> : a.pendente ? <Tag>Aguardando envio</Tag> : null}
                 </p>
                 <p className="truncate text-xs text-muted-foreground">{a.email}</p>
@@ -227,7 +231,9 @@ function SlotCard({ slot, onEdit, onAlunos }: { slot: SlotVisao; onEdit: () => v
   );
 }
 
-export function SlotsBoard({ slots, members }: { slots: SlotVisao[]; members: MembroVisao[] }) {
+export function SlotsBoard({
+  slots, members, anamneses,
+}: { slots: SlotVisao[]; members: MembroVisao[]; anamneses?: Map<string, Anamnese> }) {
   // `form`: undefined = fechado, null = novo, SlotVisao = editar. Ids evitam dado velho após revalidar.
   const [form, setForm] = useState<{ id: number | null } | undefined>();
   const [alunosId, setAlunosId] = useState<number | null>(null);
@@ -270,7 +276,7 @@ export function SlotsBoard({ slots, members }: { slots: SlotVisao[]; members: Me
       </Dialog>
       <Dialog open={!!alunosSlot} onOpenChange={(o) => !o && setAlunosId(null)}>
         <DialogContent>
-          {alunosSlot && <SlotAlunos slot={alunosSlot} members={members} onClose={() => setAlunosId(null)} />}
+          {alunosSlot && <SlotAlunos slot={alunosSlot} members={members} anamneses={anamneses} onClose={() => setAlunosId(null)} />}
         </DialogContent>
       </Dialog>
     </div>

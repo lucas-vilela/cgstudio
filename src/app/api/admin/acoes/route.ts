@@ -5,7 +5,8 @@ import type { AcaoFila, RespostaAcao } from "@/lib/offline/tipos";
 import { adminDaRequisicao, semCache } from "../guard";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const TIPOS = new Set(["pagamento", "aluno_criar", "aluno_editar", "horario_entrar", "horario_sair"]);
+const TIPOS = new Set(["pagamento", "aluno_criar", "aluno_editar", "horario_entrar", "horario_sair",
+  "anamnese_salvar", "avaliacao_salvar"]);
 
 // Recebe um item da fila do app offline. Rota estável (e não Server Action) porque o app
 // instalado pode estar rodando JS de um deploy anterior.

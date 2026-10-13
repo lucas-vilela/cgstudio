@@ -3,20 +3,23 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Pencil, RotateCw, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { descreverItem } from "@/lib/offline/descricao";
 import { descartar, tentarDeNovo } from "@/lib/offline/store";
 import type { ItemFila } from "@/lib/offline/tipos";
 import { useAdminEstado } from "@/lib/offline/use-admin";
 import type { Visao } from "@/lib/offline/visao";
+import { AvaliacaoForm } from "../ficha/medidas";
+import { LinkAluno } from "../link-aluno";
 import { MemberForm } from "../members-table";
 import { PaymentForm } from "../register-payment-dialog";
 import { Panel } from "../section";
 
 function Linha({ item, visao, onCorrigir }: { item: ItemFila; visao: Visao; onCorrigir: () => void }) {
   const [confirmar, setConfirmar] = useState(false);
-  const corrigivel = item.tipo === "pagamento" || item.tipo === "aluno_criar";
+  const corrigivel = item.tipo === "pagamento" || item.tipo === "aluno_criar" || item.tipo === "avaliacao_salvar";
   return (
     <li className="rounded-xl border border-accent/50 bg-surface-2 p-4">
       <p className="font-medium">{descreverItem(item, visao)}</p>
@@ -27,6 +30,12 @@ function Linha({ item, visao, onCorrigir }: { item: ItemFila; visao: Visao; onCo
           <Button size="sm" onClick={onCorrigir} className="min-h-11 md:min-h-7">
             <Pencil data-icon="inline-start" />Corrigir
           </Button>
+        )}
+        {item.tipo === "anamnese_salvar" && (
+          <LinkAluno id={item.payload.member_id} aba="anamnese"
+            className={cn(buttonVariants({ size: "sm", variant: "outline" }), "min-h-11 hover:no-underline md:min-h-7")}>
+            Abrir ficha
+          </LinkAluno>
         )}
         <Button size="sm" variant="outline" onClick={() => void tentarDeNovo(item.id)} className="min-h-11 md:min-h-7">
           <RotateCw data-icon="inline-start" />Tentar de novo
@@ -73,6 +82,15 @@ export function Pendencias({ visao }: { visao: Visao }) {
                 nome: membro(corrigindo.payload.member_id)?.nome ?? null,
                 valor: membro(corrigindo.payload.member_id)?.valor ?? null,
               }}
+              onClose={() => setCorrigindoId(null)}
+            />
+          )}
+          {corrigindo?.tipo === "avaliacao_salvar" && (
+            <AvaliacaoForm
+              memberId={corrigindo.payload.member_id}
+              nome={membro(corrigindo.payload.member_id)?.nome ?? null}
+              avaliacao={{ ...corrigindo.payload, erro: corrigindo.erro }}
+              naServidor={(visao.snapshot.avaliacoes ?? []).some((a) => a.id === corrigindo.payload.id)}
               onClose={() => setCorrigindoId(null)}
             />
           )}

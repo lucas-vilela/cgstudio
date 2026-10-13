@@ -3,6 +3,7 @@ import type {
   AdminMember, Inadimplente, Plan, SlotRow, Treino, Vencimento,
 } from "@/app/dashboard/admin/types";
 import type { Forma } from "@/app/dashboard/admin/types";
+import type { Anamnese, Avaliacao, CamposAnamnese } from "@/lib/anamnese";
 
 export type PagamentoSnapshot = {
   id: number;
@@ -26,6 +27,9 @@ export type AdminSnapshot = {
   vencimentos: Vencimento[];
   inadimplentes: Inadimplente[];
   pagamentos: PagamentoSnapshot[];
+  // Ficha do aluno (0013). Opcionais: snapshot salvo por uma versão anterior do app não tem.
+  anamneses?: Anamnese[];
+  avaliacoes?: Avaliacao[];
 };
 
 export type CamposAluno = Partial<{
@@ -63,7 +67,10 @@ export type AcaoFila =
     }
   | { tipo: "aluno_editar"; payload: { member_id: string; campos: CamposAluno } }
   | { tipo: "horario_entrar"; payload: { slot_id: number; member_id: string } }
-  | { tipo: "horario_sair"; payload: { slot_id: number; member_id: string } };
+  | { tipo: "horario_sair"; payload: { slot_id: number; member_id: string } }
+  | { tipo: "anamnese_salvar"; payload: { member_id: string; campos: CamposAnamnese } }
+  // Criar e corrigir: upsert pelo id da avaliação (gerado no aparelho).
+  | { tipo: "avaliacao_salvar"; payload: Avaliacao };
 
 export type ItemFila = AcaoFila & {
   id: string; // uuid gerado no aparelho; também é a chave de idempotência no servidor

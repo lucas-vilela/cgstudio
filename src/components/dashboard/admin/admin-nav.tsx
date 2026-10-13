@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { toast } from "sonner";
-import { SECOES_OFFLINE } from "@/lib/offline/secoes";
+import { navegar } from "@/lib/offline/navegacao";
+import { ehFicha } from "@/lib/offline/secoes";
 import { cn } from "@/lib/utils";
 import { CalendarDays, LayoutTemplate, ShieldCheck, Users, Wallet } from "lucide-react";
 
@@ -16,21 +16,9 @@ const ITEMS = [
   { href: "/dashboard/admin/admins", label: "Admins", icon: ShieldCheck },
 ];
 
-// Alunos, Financeiro e Calendário são o mesmo app de cliente (funciona offline): trocar entre eles
-// só muda a URL com pushState, sem ir ao servidor. As outras abas precisam de conexão.
-
-function navegar(e: React.MouseEvent<HTMLAnchorElement>, pathname: string, href: string) {
-  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-  if (SECOES_OFFLINE.has(pathname) && SECOES_OFFLINE.has(href)) {
-    e.preventDefault();
-    window.history.pushState(null, "", href);
-  } else if (!navigator.onLine) {
-    e.preventDefault();
-    // Vindo de uma aba online, carrega a página inteira (o service worker serve a cópia salva).
-    if (SECOES_OFFLINE.has(href)) window.location.assign(href);
-    else toast.warning("Esta aba precisa de conexão com a internet.");
-  }
-}
+// Alunos (e a ficha de cada aluno), Financeiro e Calendário são o mesmo app de cliente (funciona
+// offline): trocar entre eles só muda a URL com pushState (ver navegar). As outras abas precisam de
+// conexão.
 
 export function AdminNav({ pendentes = 0 }: { pendentes?: number }) {
   const pathname = usePathname();
@@ -55,13 +43,15 @@ export function AdminNav({ pendentes = 0 }: { pendentes?: number }) {
       )}>
       <ul className="flex w-max gap-2">
         {ITEMS.map((item) => {
-          const active = pathname === item.href;
+          // A ficha do aluno fica dentro de "Alunos".
+          const active =
+            pathname === item.href || (item.href === "/dashboard/admin" && ehFicha(pathname));
           return (
             <li key={item.href}>
               <Link
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                onClick={(e) => navegar(e, pathname, item.href)}
+                onClick={(e) => navegar(e, item.href)}
                 className={cn(
                   "inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring md:min-h-9",
                   active

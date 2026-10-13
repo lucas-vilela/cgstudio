@@ -74,3 +74,26 @@ export async function setUserRole(userId: string, role: "admin" | "member"): Pro
   refresh();
   return { ok: true, data: undefined };
 }
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Ficha do aluno: apagar não tem volta, então não passa pela fila offline (só online).
+export async function apagarAnamnese(memberId: string): Promise<Result> {
+  const a = await admin();
+  if ("error" in a) return fail(a.error);
+  if (!UUID_RE.test(memberId)) return fail("Aluno inválido.");
+  const { error } = await a.supabase.from("member_anamneses").delete().eq("member_id", memberId);
+  if (error) return fail(friendlyError(error, "Não foi possível apagar a anamnese."));
+  refresh();
+  return { ok: true, data: undefined };
+}
+
+export async function excluirAvaliacao(avaliacaoId: string): Promise<Result> {
+  const a = await admin();
+  if ("error" in a) return fail(a.error);
+  if (!UUID_RE.test(avaliacaoId)) return fail("Avaliação inválida.");
+  const { error } = await a.supabase.from("member_avaliacoes").delete().eq("id", avaliacaoId);
+  if (error) return fail(friendlyError(error, "Não foi possível excluir a avaliação."));
+  refresh();
+  return { ok: true, data: undefined };
+}

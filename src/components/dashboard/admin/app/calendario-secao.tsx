@@ -10,7 +10,7 @@ export function CalendarioSecao({ visao }: { visao: Visao }) {
         <h1 className="text-4xl">Calendário</h1>
         <p className="text-sm text-muted-foreground">Horários semanais, capacidade e alunos de cada turma.</p>
       </div>
-      <SlotsBoard slots={visao.slots} members={visao.members} />
+      <SlotsBoard slots={visao.slots} members={visao.members} anamneses={visao.anamneses} />
     </div>
   );
 }

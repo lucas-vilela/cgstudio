@@ -1,8 +1,10 @@
 // Só servidor: usado pelas rotas /api/admin/*.
 import type { createClient } from "@/lib/supabase/server";
+import { validarAvaliacao, validarCamposAnamnese, type CamposAnamnese } from "@/lib/anamnese";
 import type { AcaoFila, CamposAluno, RespostaAcao } from "@/lib/offline/tipos";
 import { STATUSES, validateDadosAluno } from "../members";
 import { friendlyError } from "./errors";
+import { todayISO } from "./format";
 import { FORMAS } from "./types";
 
 // Executa no servidor um item da fila do app offline do admin. Toda ação é idempotente pelo id do
@@ -138,6 +140,27 @@ async function horario(sb: Supabase, entrar: boolean, p: { slot_id: number; memb
   return error ? traduz(error, "Não foi possível alterar o horário.") : OK;
 }
 
+// Envia só os campos alterados: o upsert do PostgREST atualiza exatamente essas colunas, então uma
+// edição offline não desfaz o que outro admin mudou em outros campos. Repetir = mesmo resultado.
+async function anamneseSalvar(sb: Supabase, p: { member_id: string; campos: CamposAnamnese }) {
+  if (!UUID.test(p.member_id)) return regra("Aluno inválido.");
+  const v = validarCamposAnamnese(p.campos, todayISO());
+  if ("error" in v) return regra(v.error);
+  if (!Object.keys(v.data).length) return OK;
+  const { error } = await sb
+    .from("member_anamneses")
+    .upsert({ member_id: p.member_id, ...v.data }, { onConflict: "member_id" });
+  return error ? traduz(error, "Não foi possível salvar a anamnese.") : OK;
+}
+
+// Criar e corrigir avaliação: upsert pelo id gerado no aparelho (idempotente).
+async function avaliacaoSalvar(sb: Supabase, p: unknown) {
+  const v = validarAvaliacao(p, todayISO());
+  if ("error" in v) return regra(v.error);
+  const { error } = await sb.from("member_avaliacoes").upsert(v.data, { onConflict: "id" });
+  return error ? traduz(error, "Não foi possível salvar as medidas.") : OK;
+}
+
 export async function executarAcao(sb: Supabase, id: string, acao: AcaoFila): Promise<RespostaAcao> {
   switch (acao.tipo) {
     case "pagamento": return pagamento(sb, id, acao.payload);
@@ -145,6 +168,8 @@ export async function executarAcao(sb: Supabase, id: string, acao: AcaoFila): Pr
     case "aluno_editar": return alunoEditar(sb, acao.payload);
     case "horario_entrar": return horario(sb, true, acao.payload);
     case "horario_sair": return horario(sb, false, acao.payload);
+    case "anamnese_salvar": return anamneseSalvar(sb, acao.payload);
+    case "avaliacao_salvar": return avaliacaoSalvar(sb, acao.payload);
     default: return regra("Tipo de ação desconhecido.");
   }
 }

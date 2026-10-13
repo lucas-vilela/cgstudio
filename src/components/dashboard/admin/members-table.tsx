@@ -19,7 +19,10 @@ import { Label } from "@/components/ui/label";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import type { Anamnese } from "@/lib/anamnese";
+import { AlertaIcone } from "./ficha/alerta";
 import { FieldSelect } from "./field-select";
+import { LinkAluno } from "./link-aluno";
 import { RegisterPaymentButton } from "./register-payment-dialog";
 import { EmptyNote } from "./section";
 import { Tag } from "./tag";
@@ -30,7 +33,7 @@ const NO_PLAN = "none";
 const mesmosTreinos = (a: number[], b: number[]) =>
   a.length === b.length && a.every((id) => b.includes(id));
 
-function VencimentoCell({ m }: { m: MembroVisao }) {
+export function VencimentoCell({ m }: { m: MembroVisao }) {
   if (!m.vencimento) return <span className="text-muted-foreground">Sem vencimento</span>;
   const dias = m.dias_para_vencer ?? 0;
   return (
@@ -255,8 +258,14 @@ export function MemberForm({
 }
 
 export function MembersTable({
-  members, todos, plans, treinos,
-}: { members: MembroVisao[]; todos: MembroVisao[]; plans: Plan[]; treinos: Treino[] }) {
+  members, todos, plans, treinos, anamneses,
+}: {
+  members: MembroVisao[];
+  todos: MembroVisao[];
+  plans: Plan[];
+  treinos: Treino[];
+  anamneses?: Map<string, Anamnese>;
+}) {
   // undefined = fechado, null = novo aluno, MembroVisao = editar.
   const [editing, setEditing] = useState<MembroVisao | null | undefined>(undefined);
 
@@ -290,7 +299,8 @@ export function MembersTable({
 
   const nomeCell = (m: MembroVisao) => (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="font-medium">{m.nome ?? "—"}</span>
+      <LinkAluno id={m.member_id} className="font-medium">{m.nome ?? "—"}</LinkAluno>
+      <AlertaIcone anamnese={anamneses?.get(m.member_id)} />
       {!m.tem_login && <Tag className="px-2 py-0.5 text-[11px]">Sem login</Tag>}
       {m.erro ? (
         <Tag hot className="px-2 py-0.5 text-[11px]" title={m.erro}>Erro no envio</Tag>

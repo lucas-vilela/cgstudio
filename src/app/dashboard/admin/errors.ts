@@ -22,6 +22,10 @@ const MESSAGES: Record<string, string> = {
   aluno_nao_ativo: "Só alunos com matrícula ativa podem enviar depoimento.",
   aluno_sem_nome: "Complete seu nome no cadastro antes de enviar um depoimento.",
   texto_invalido: "O depoimento deve ter entre 10 e 500 caracteres.",
+  member_anamneses_member_id_fkey: "Aluno não encontrado (o cadastro pode ter sido excluído).",
+  member_avaliacoes_member_id_fkey: "Aluno não encontrado (o cadastro pode ter sido excluído).",
+  member_avaliacoes_alguma_medida: "Informe pelo menos uma medida.",
+  data_no_futuro: "A data não pode ser no futuro.",
 };
 
 export function friendlyError(

@@ -18,5 +18,9 @@ export function descreverItem(item: ItemFila, visao: Visao) {
       const h = s ? `${DIAS[s.dia_semana]} ${hhmm(s.hora_inicio)}` : "horário";
       return `${nome(item.payload.member_id)} ${item.tipo === "horario_entrar" ? "entrar em" : "sair de"} ${h}`;
     }
+    case "anamnese_salvar":
+      return `Anamnese de ${nome(item.payload.member_id)}`;
+    case "avaliacao_salvar":
+      return `Medidas de ${nome(item.payload.member_id)} em ${formatDate(item.payload.data)}`;
   }
 }

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import type { Anamnese, Avaliacao } from "@/lib/anamnese";
 import { todayISO } from "./format";
 import type {
   AdminMember,
@@ -88,8 +89,8 @@ export async function getAdminMembers(): Promise<AdminMember[]> {
       (de, ate) => supabase.from("member_financeiro").select("*").order("nome").order("member_id").range(de, ate),
       "member_financeiro",
     ),
-    todasAsPaginas<{ id: string; valor_acordado: number | null; auth_user_id: string | null }>(
-      (de, ate) => supabase.from("members").select("id,valor_acordado,auth_user_id").order("id").range(de, ate),
+    todasAsPaginas<{ id: string; valor_acordado: number | null; auth_user_id: string | null; created_at: string }>(
+      (de, ate) => supabase.from("members").select("id,valor_acordado,auth_user_id,created_at").order("id").range(de, ate),
       "members",
     ),
     todasAsPaginas<{ member_id: string; treino_id: number }>(
@@ -102,6 +103,7 @@ export async function getAdminMembers(): Promise<AdminMember[]> {
     extras.filter((m) => m.valor_acordado != null).map((m) => [m.id, num(m.valor_acordado)]),
   );
   const semLogin = new Set(extras.filter((m) => !m.auth_user_id).map((m) => m.id));
+  const desde = new Map(extras.map((m) => [m.id, m.created_at]));
   const treinos = new Map<string, number[]>();
   for (const l of ligacoes) treinos.set(l.member_id, [...(treinos.get(l.member_id) ?? []), l.treino_id]);
   return rows.map((r) => ({
@@ -110,6 +112,43 @@ export async function getAdminMembers(): Promise<AdminMember[]> {
     valor_acordado: acordado.get(r.member_id) ?? null,
     treino_ids: treinos.get(r.member_id) ?? [],
     tem_login: !semLogin.has(r.member_id),
+    desde: desde.get(r.member_id) ?? null,
+  }));
+}
+
+// Ficha do aluno (snapshot do app do admin). Só admin lê (RLS).
+const COLS_ANAMNESE =
+  "member_id,data_nascimento,endereco,doenca_cronica,doenca_cronica_quais,medicacao_continua,medicacao_quais," +
+  "restricao_medica,restricao_detalhe,praticou_exercicio,modalidades_anteriores,tempo_pratica,objetivos," +
+  "autoriza_imagem,autoriza_imagem_data,consentimento_saude,consentimento_saude_data,cuidados_treino," +
+  "observacoes,updated_at,updated_by_nome";
+
+export async function getAnamneses(): Promise<Anamnese[]> {
+  const supabase = await createClient();
+  return todasAsPaginas<Anamnese>(
+    (de, ate) =>
+      supabase.from("member_anamneses_admin").select(COLS_ANAMNESE).order("member_id").range(de, ate) as unknown as
+        PromiseLike<{ data: Anamnese[] | null; error: { message: string } | null }>,
+    "member_anamneses",
+  );
+}
+
+export async function getAvaliacoes(): Promise<Avaliacao[]> {
+  const supabase = await createClient();
+  const rows = await todasAsPaginas<Avaliacao>(
+    (de, ate) =>
+      supabase
+        .from("member_avaliacoes")
+        .select("id,member_id,data,peso_kg,cintura_cm,quadril_cm,coxa_cm,peito_cm,braco_cm,observacao")
+        .order("member_id").order("data", { ascending: false }).order("id")
+        .range(de, ate),
+    "member_avaliacoes",
+  );
+  const n = (v: unknown) => (v == null ? null : Number(v)); // numeric chega como string
+  return rows.map((r) => ({
+    ...r,
+    peso_kg: n(r.peso_kg), cintura_cm: n(r.cintura_cm), quadril_cm: n(r.quadril_cm),
+    coxa_cm: n(r.coxa_cm), peito_cm: n(r.peito_cm), braco_cm: n(r.braco_cm),
   }));
 }
 

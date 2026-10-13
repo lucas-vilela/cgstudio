@@ -7,6 +7,7 @@ import {
 import { RegisterPaymentButton } from "./register-payment-dialog";
 import { EmptyNote } from "./section";
 import { Tag } from "./tag";
+import { LinkAluno } from "./link-aluno";
 
 // `pendentes`: alunos com pagamento aguardando envio (a lista vem do servidor e ainda não sabe dele).
 export function InadimplentesTable({ items, pendentes }: { items: Inadimplente[]; pendentes?: Set<string> }) {
@@ -26,7 +27,7 @@ export function InadimplentesTable({ items, pendentes }: { items: Inadimplente[]
         {items.map((i) => (
           <TableRow key={i.member_id}>
             <TableCell>
-              <div className="font-medium">{i.nome ?? "—"}</div>
+              <div className="font-medium"><LinkAluno id={i.member_id}>{i.nome ?? "—"}</LinkAluno></div>
               {pendentes?.has(i.member_id) && <Tag className="mt-1">Pagamento aguardando envio</Tag>}
               <div className="text-xs text-muted-foreground">{i.plano_nome ?? "Sem plano"}</div>
             </TableCell>

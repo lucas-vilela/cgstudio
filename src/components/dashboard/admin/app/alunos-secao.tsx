@@ -42,7 +42,8 @@ export function AlunosSecao({ visao }: { visao: Visao }) {
               placeholder="Buscar por nome, e-mail ou telefone" aria-label="Buscar alunos" className="pl-8" />
           </div>
         </div>
-        <MembersTable members={members} todos={visao.members} plans={visao.plans} treinos={visao.snapshot.treinos} />
+        <MembersTable members={members} todos={visao.members} plans={visao.plans} treinos={visao.snapshot.treinos}
+          anamneses={visao.anamneses} />
       </Panel>
     </div>
   );

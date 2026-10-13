@@ -12,7 +12,9 @@ Base: `docs/superpowers/specs/2026-10-12-pwa-offline-design.md`. Estado do códi
   - aluno novo: `members.id` gerado no aparelho;
   - horário: insert com "on conflict do nothing";
   - edição: só os campos alterados.
-- **Navegação offline entre Alunos, Financeiro e Calendário** sem buscar no servidor: as três rotas renderizam o mesmo `AdminApp` de cliente. A troca de aba usa `window.history.pushState`, que o Next sincroniza com `usePathname`. Conteúdo e Admins seguem como hoje (online).
+  - anamnese (`anamnese_salvar`, 0013): upsert por `member_id` só com os campos alterados;
+  - medidas (`avaliacao_salvar`, 0013): `member_avaliacoes.id` gerado no aparelho, upsert pelo id.
+- **Navegação offline entre Alunos, Financeiro, Calendário e a ficha do aluno** (`/dashboard/admin/aluno?id=`) sem buscar no servidor: essas rotas renderizam o mesmo `AdminApp` de cliente (lista em `src/lib/offline/secoes.ts`). A troca de aba usa `window.history.pushState`, que o Next sincroniza com `usePathname`. Conteúdo e Admins seguem como hoje (online).
 - **Service worker** próprio (`public/sw.js`, escopo `/dashboard/admin`):
   - navegação: network-first com fallback ao HTML em cache;
   - `/_next/static`: cache-first;

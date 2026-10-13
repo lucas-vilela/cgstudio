@@ -28,6 +28,8 @@ export type AdminMember = {
   treino_ids: number[];
   // false = cadastrado pelo admin, ainda sem conta Google ligada.
   tem_login: boolean;
+  // Data do cadastro (ISO). Nulo em snapshot antigo ou cadastro feito offline.
+  desde?: string | null;
 };
 
 export type Vencimento = {

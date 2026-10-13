@@ -67,6 +67,7 @@ A coluna `plano` (texto livre) de `members` é substituída por `plan_id`.
 - Calendário (`/dashboard/admin/calendario`): criar/editar slots e capacidade; ver e remover alunos de cada slot.
 - Financeiro (`/dashboard/admin/financeiro`): entradas do mês, inadimplentes, histórico por aluno.
 - Admins (`/dashboard/admin/admins`): lista, promover aluno a admin, rebaixar.
+- **Ficha do aluno** (`/dashboard/admin/aluno?id=<id>`, migration `0013`): resumo, anamnese (perguntas da ficha em papel do studio) e medidas datadas, com alerta de saúde nas listas. Só admin lê e escreve. Design: `docs/superpowers/specs/2026-10-13-ficha-aluno-anamnese-design.md`.
 - **Componente "Vencimentos próximos"** no painel: quem vence nos próximos 5 dias, do mais perto ao mais longe (nome, plano, data, dias restantes, atalho "registrar pagamento").
 
 ## Divisão entre os terminais

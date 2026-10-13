@@ -2,8 +2,10 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { ehFicha, useQuery } from "@/lib/offline/secoes";
 import { iniciar, iniciarSemUsuario } from "@/lib/offline/store";
 import { useAdminEstado, useVisao } from "@/lib/offline/use-admin";
+import { FichaAluno } from "../ficha/ficha-aluno";
 import { PageLoading } from "../page-loading";
 import { AlunosSecao } from "./alunos-secao";
 import { CalendarioSecao } from "./calendario-secao";
@@ -11,7 +13,7 @@ import { FinanceiroSecao } from "./financeiro-secao";
 import { Pendencias } from "./pendencias";
 import { StatusConexao } from "./status-conexao";
 
-// Alunos, Financeiro e Calendário (SECOES_OFFLINE): as três rotas renderizam este componente,
+// Alunos (e a ficha de cada aluno), Financeiro e Calendário (ver secoes.ts): essas rotas renderizam este componente,
 // que lê os dados do aparelho e sincroniza com o servidor.
 const ULTIMO_USUARIO = "cg-admin-ultimo-usuario";
 
@@ -48,6 +50,8 @@ export function AdminApp() {
     else iniciarSemUsuario();
   }, []);
 
+  const query = useQuery();
+  const ficha = ehFicha(pathname) ? query.get("id") : null;
   let conteudo: React.ReactNode;
   if (!visao) {
     const semDados = estado.carregado && !estado.online;
@@ -59,6 +63,8 @@ export function AdminApp() {
       ) : (
         <PageLoading />
       );
+  } else if (ehFicha(pathname)) {
+    conteudo = <FichaAluno key={ficha ?? ""} visao={visao} memberId={ficha ?? ""} />;
   } else if (pathname.startsWith("/dashboard/admin/financeiro")) {
     conteudo = <FinanceiroSecao visao={visao} />;
   } else if (pathname.startsWith("/dashboard/admin/calendario")) {

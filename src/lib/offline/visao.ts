@@ -1,4 +1,5 @@
 import type { AdminMember, Plan, SlotRow } from "@/app/dashboard/admin/types";
+import { ANAMNESE_VAZIA, type Anamnese, type Avaliacao } from "@/lib/anamnese";
 import type { AdminSnapshot, ItemFila, PagamentoSnapshot } from "./tipos";
 
 // O que as telas mostram: snapshot do servidor + fila local aplicada por cima. Itens da fila
@@ -8,6 +9,8 @@ import type { AdminSnapshot, ItemFila, PagamentoSnapshot } from "./tipos";
 export type Marca = { pendente?: boolean; erro?: string };
 export type MembroVisao = AdminMember & Marca & { pagamentoPendente?: boolean };
 export type PagamentoVisao = PagamentoSnapshot & Marca & { fila_id?: string };
+export type AnamneseVisao = Anamnese & Marca;
+export type AvaliacaoVisao = Avaliacao & Marca;
 export type SlotVisao = Omit<SlotRow, "alunos"> & {
   alunos: (SlotRow["alunos"][number] & Marca)[];
 };
@@ -20,6 +23,9 @@ export type Visao = {
   plans: Plan[];
   // Alunos com pagamento aguardando envio (marca nas listas que vêm prontas do servidor).
   pagamentosPendentes: Set<string>;
+  // Ficha do aluno, por member_id. Avaliações da mais recente para a mais antiga.
+  anamneses: Map<string, AnamneseVisao>;
+  avaliacoes: Map<string, AvaliacaoVisao[]>;
 };
 
 const marca = (i: ItemFila): Marca => (i.status === "erro" ? { erro: i.erro } : { pendente: true });
@@ -39,6 +45,9 @@ export function montarVisao(snapshot: AdminSnapshot, fila: ItemFila[]): Visao {
   const members = new Map<string, MembroVisao>(snapshot.members.map((m) => [m.member_id, { ...m }]));
   const slots: SlotVisao[] = snapshot.slots.map((s) => ({ ...s, alunos: s.alunos.map((a) => ({ ...a })) }));
   const pagamentos: PagamentoVisao[] = [];
+  const anamneses = new Map<string, AnamneseVisao>((snapshot.anamneses ?? []).map((a) => [a.member_id, { ...a }]));
+  const avaliacoes = new Map<string, AvaliacaoVisao[]>();
+  for (const a of snapshot.avaliacoes ?? []) avaliacoes.set(a.member_id, [...(avaliacoes.get(a.member_id) ?? []), { ...a }]);
 
   for (const item of fila) {
     switch (item.tipo) {
@@ -123,10 +132,23 @@ export function montarVisao(snapshot: AdminSnapshot, fila: ItemFila[]): Visao {
         s.vagas = Math.max(0, s.capacidade - s.ocupados);
         break;
       }
+      case "anamnese_salvar": {
+        const id = item.payload.member_id;
+        const atual = anamneses.get(id) ?? ANAMNESE_VAZIA(id);
+        anamneses.set(id, { ...atual, ...item.payload.campos, ...marca(item) });
+        break;
+      }
+      case "avaliacao_salvar": {
+        const a = item.payload;
+        const lista = (avaliacoes.get(a.member_id) ?? []).filter((x) => x.id !== a.id);
+        avaliacoes.set(a.member_id, [...lista, { ...a, ...marca(item) }]);
+        break;
+      }
     }
   }
 
   for (const s of slots) s.alunos.sort((a, b) => (a.nome ?? "").localeCompare(b.nome ?? ""));
+  for (const lista of avaliacoes.values()) lista.sort((a, b) => b.data.localeCompare(a.data) || a.id.localeCompare(b.id));
   return {
     snapshot,
     members: [...members.values()].sort((a, b) => (a.nome ?? "").localeCompare(b.nome ?? "")),
@@ -134,5 +156,7 @@ export function montarVisao(snapshot: AdminSnapshot, fila: ItemFila[]): Visao {
     pagamentos: [...pagamentos, ...snapshot.pagamentos],
     plans,
     pagamentosPendentes: new Set(fila.filter((i) => i.tipo === "pagamento").map((i) => i.payload.member_id)),
+    anamneses,
+    avaliacoes,
   };
 }

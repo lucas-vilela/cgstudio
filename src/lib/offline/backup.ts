@@ -3,6 +3,7 @@ import type { Cell, Row } from "write-excel-file/browser";
 import { DIAS, formatDate, hhmm, todayISO } from "@/app/dashboard/admin/format";
 import { formaLabel } from "@/app/dashboard/admin/types";
 import { formatPhone, statusLabel } from "@/app/dashboard/members";
+import { anamnesePreenchida, MEDIDAS, PERGUNTAS, type CampoAnamnese } from "@/lib/anamnese";
 import { descreverItem } from "./descricao";
 import type { ItemFila } from "./tipos";
 import type { Visao } from "./visao";
@@ -48,11 +49,36 @@ export async function exportarPlanilha(visao: Visao, fila: ItemFila[]) {
     ...visao.plans.map((p): Row => [p.nome, p.vezes_semana, dinheiro(p.valor_padrao), txt(p.descricao), p.exibir_na_home ? "Sim" : "Não"]),
   ];
 
+  // Ficha do aluno: as perguntas da folha como cabeçalho, uma linha por aluno com anamnese.
+  const nomeDe = new Map(visao.members.map((m) => [m.member_id, m.nome]));
+  const campos = Object.keys(PERGUNTAS) as CampoAnamnese[];
+  const resposta = (v: unknown): Cell =>
+    v == null ? "" : typeof v === "boolean" ? (v ? "Sim" : "Não") : /^\d{4}-\d{2}-\d{2}$/.test(String(v)) ? formatDate(String(v)) : String(v);
+  const anamneses: Row[] = [
+    ["Aluno", ...campos.map((k) => PERGUNTAS[k]), "Atualizada em"].map(titulo),
+    ...[...visao.anamneses.values()]
+      .filter((a) => anamnesePreenchida(a))
+      .sort((a, b) => (nomeDe.get(a.member_id) ?? "").localeCompare(nomeDe.get(b.member_id) ?? ""))
+      .map((a): Row => [
+        txt(nomeDe.get(a.member_id)), ...campos.map((k) => resposta(a[k])),
+        a.updated_at ? new Date(a.updated_at).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "",
+      ]),
+  ];
+  const medida = (v: number | null): Cell => (v == null ? null : { value: v, type: Number, format: "0.0" });
+  const medidas: Row[] = [
+    ["Aluno", "Data", ...MEDIDAS.map((m) => `${m.rotulo} (${m.unidade})`), "Observação"].map(titulo),
+    ...[...visao.avaliacoes.values()].flat()
+      .sort((a, b) => (nomeDe.get(a.member_id) ?? "").localeCompare(nomeDe.get(b.member_id) ?? "") || a.data.localeCompare(b.data))
+      .map((a): Row => [txt(nomeDe.get(a.member_id)), formatDate(a.data), ...MEDIDAS.map((m) => medida(a[m.campo])), txt(a.observacao)]),
+  ];
+
   const sheets = [
     { sheet: "Alunos", data: alunos, columns: [{ width: 30 }, { width: 18 }, { width: 30 }, { width: 10 }, { width: 12 }, { width: 10 }, { width: 12 }, { width: 30 }, { width: 12 }, { width: 30 }] },
     { sheet: "Pagamentos", data: pagamentos, columns: [{ width: 12 }, { width: 30 }, { width: 12 }, { width: 10 }, { width: 40 }, { width: 30 }] },
     { sheet: "Horários", data: horarios, columns: [{ width: 10 }, { width: 8 }, { width: 8 }, { width: 11 }, { width: 10 }, { width: 8 }, { width: 60 }] },
     { sheet: "Planos", data: planos, columns: [{ width: 12 }, { width: 16 }, { width: 16 }, { width: 40 }, { width: 10 }] },
+    { sheet: "Anamnese", data: anamneses, columns: [{ width: 30 }, ...campos.map(() => ({ width: 28 })), { width: 14 }] },
+    { sheet: "Medidas", data: medidas, columns: [{ width: 30 }, { width: 12 }, ...MEDIDAS.map(() => ({ width: 14 })), { width: 40 }] },
   ];
 
   const pendentes = fila.filter((i) => i.status === "pendente" || i.status === "erro");
