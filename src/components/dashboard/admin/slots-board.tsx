@@ -234,7 +234,8 @@ export function SlotsBoard({ slots, members }: { slots: SlotVisao[]; members: Me
   const formSlot = form?.id != null ? (slots.find((s) => s.slot_id === form.id) ?? null) : null;
   const alunosSlot = alunosId != null ? slots.find((s) => s.slot_id === alunosId) : undefined;
 
-  const days = WEEK_ORDER.filter((d) => (d >= 1 && d <= 5) || slots.some((s) => s.dia_semana === d));
+  // Todos os dias, inclusive sábado e domingo: deixa claro que dá para ter horário em qualquer dia.
+  const days = WEEK_ORDER;
 
   return (
     <div className="flex flex-col gap-6">

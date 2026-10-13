@@ -63,13 +63,24 @@ export function mensagemErro(error: { message?: string; code?: string } | null |
   return ERROS[(error.message ?? "").trim()] ?? ERRO_GENERICO;
 }
 
+// Ordem de exibição: segunda a domingo. Sábado e domingo só aparecem na grade do aluno quando
+// há horário ativo neles (ver diasComHorario).
 export const DIAS = [
   { dow: 1, curto: "Seg", longo: "Segunda" },
   { dow: 2, curto: "Ter", longo: "Terça" },
   { dow: 3, curto: "Qua", longo: "Quarta" },
   { dow: 4, curto: "Qui", longo: "Quinta" },
   { dow: 5, curto: "Sex", longo: "Sexta" },
+  { dow: 6, curto: "Sáb", longo: "Sábado" },
+  { dow: 0, curto: "Dom", longo: "Domingo" },
 ] as const;
+
+const fimDeSemana = (dow: number) => dow === 0 || dow === 6;
+
+/** Dias da grade: segunda a sexta sempre; sábado e domingo se tiverem horário. */
+export function diasComHorario(slots: { dia_semana: number }[]) {
+  return DIAS.filter((d) => !fimDeSemana(d.dow) || slots.some((s) => s.dia_semana === d.dow));
+}
 
 const NOME_DIA = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 export const nomeDia = (dow: number) => NOME_DIA[dow] ?? "";

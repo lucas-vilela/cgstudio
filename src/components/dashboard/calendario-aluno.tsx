@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import {
   bloqueioEntrar,
-  DIAS,
+  diasComHorario,
   dataCurta,
   diaDaSemana,
   hhmm,
@@ -32,7 +32,7 @@ type Pendente = { slotId: number; tipo: "entrar" | "sair" } | null;
 export function CalendarioAluno({ slots, financeiro, meusSlotIds, experimental, hoje, acoes }: Props) {
   const [diaMobile, setDiaMobile] = useState<number>(() => {
     const d = diaDaSemana(hoje);
-    return d >= 1 && d <= 5 ? d : 1;
+    return diasComHorario(slots.filter((s) => s.ativo)).some((x) => x.dow === d) ? d : 1;
   });
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, setPendente] = useState<Pendente>(null);
@@ -40,7 +40,8 @@ export function CalendarioAluno({ slots, financeiro, meusSlotIds, experimental, 
 
   const meus = new Set(meusSlotIds);
   const bloqueio = bloqueioEntrar(financeiro);
-  const semana = slots.filter((s) => s.ativo && s.dia_semana >= 1 && s.dia_semana <= 5);
+  const semana = slots.filter((s) => s.ativo);
+  const dias = diasComHorario(semana);
   const horarios = [...new Set(semana.map((s) => `${s.hora_inicio}|${s.hora_fim}`))].sort();
   const porCelula = (dow: number, h: string) =>
     semana.find((s) => s.dia_semana === dow && `${s.hora_inicio}|${s.hora_fim}` === h);
@@ -108,8 +109,9 @@ export function CalendarioAluno({ slots, financeiro, meusSlotIds, experimental, 
           <>
             {/* Celular: um dia por vez */}
             <div className="md:hidden">
-              <div role="group" aria-label="Dia da semana" className="mb-3 grid grid-cols-5 gap-1.5">
-                {DIAS.map((d) => {
+              <div role="group" aria-label="Dia da semana" className="mb-3 grid gap-1.5"
+                style={{ gridTemplateColumns: `repeat(${dias.length}, minmax(0, 1fr))` }}>
+                {dias.map((d) => {
                   const ativo = diaMobile === d.dow;
                   const temMeu = semana.some((s) => s.dia_semana === d.dow && meus.has(s.slot_id));
                   return (
@@ -145,16 +147,16 @@ export function CalendarioAluno({ slots, financeiro, meusSlotIds, experimental, 
               </div>
             </div>
 
-            {/* Desktop: grade seg–sex */}
-            <div className="hidden grid-cols-[64px_repeat(5,1fr)] gap-2 md:grid">
+            {/* Desktop: grade seg–sex (+ sáb/dom quando houver horário) */}
+            <div className="hidden gap-2 md:grid" style={{ gridTemplateColumns: `64px repeat(${dias.length}, 1fr)` }}>
               <div />
-              {DIAS.map((d) => (
+              {dias.map((d) => (
                 <div key={d.dow} className="pb-1 text-center text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
                   {d.curto}
                 </div>
               ))}
               {horarios.map((h) => (
-                <GradeLinha key={h} h={h} celula={(dow) => porCelula(dow, h)} render={(s) => celula(s, false)} />
+                <GradeLinha key={h} h={h} dias={dias} celula={(dow) => porCelula(dow, h)} render={(s) => celula(s, false)} />
               ))}
             </div>
           </>
@@ -182,17 +184,19 @@ export function CalendarioAluno({ slots, financeiro, meusSlotIds, experimental, 
 
 function GradeLinha({
   h,
+  dias,
   celula,
   render,
 }: {
   h: string;
+  dias: readonly { dow: number }[];
   celula: (dow: number) => SlotVaga | undefined;
   render: (s: SlotVaga) => React.ReactNode;
 }) {
   return (
     <>
       <div className="flex items-start pt-3 text-[13px] font-medium text-muted-foreground">{hhmm(h.split("|")[0])}</div>
-      {DIAS.map((d) => {
+      {dias.map((d) => {
         const s = celula(d.dow);
         return <div key={d.dow}>{s ? render(s) : null}</div>;
       })}
