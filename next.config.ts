@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Os testes E2E usam outra pasta (.next-test) para rodar junto do `next dev`.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   cacheComponents: true,
   // Service worker do painel do admin (guia de PWA do Next).
   async headers() {
