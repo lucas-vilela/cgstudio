@@ -47,6 +47,14 @@ export const adminStore = {
 
 let eventosLigados = false;
 let timerRetry: ReturnType<typeof setTimeout> | null = null;
+// Logout em curso: nada mais é gravado no aparelho nem enviado (uma atualização ou envio em voo
+// regravaria o snapshot/fila logo depois da limpeza). Volta a valer no próximo `iniciar`.
+let encerrado = false;
+
+export function encerrar() {
+  encerrado = true;
+  if (timerRetry) clearTimeout(timerRetry);
+}
 
 function ligarEventos() {
   if (eventosLigados || typeof window === "undefined") return;
@@ -73,6 +81,7 @@ export function iniciarSemUsuario() {
 }
 
 export async function iniciar(userId: string) {
+  encerrado = false;
   ligarEventos();
   if (estado.userId === userId && estado.carregado) return;
   set({ userId, carregado: false, snapshot: null, fila: [], online: navigator.onLine });
@@ -117,7 +126,9 @@ export async function atualizar(): Promise<void> {
     if (!res.ok) return;
     const snap = (await res.json()) as AdminSnapshot;
     if (snap.user_id !== userId || estado.userId !== userId) return;
-    await (await abrirDB()).put("snapshot", snap, userId);
+    const db = await abrirDB();
+    if (encerrado) return;
+    await db.put("snapshot", snap, userId);
     set({ snapshot: snap, precisaLogin: false });
   } catch {
     // sem rede: segue com o snapshot salvo
@@ -136,7 +147,9 @@ const uuid = () => crypto.randomUUID();
 export const novoId = uuid;
 
 async function salvarItem(item: ItemFila) {
-  await (await abrirDB()).put("fila", item);
+  const db = await abrirDB();
+  if (encerrado) return;
+  await db.put("fila", item);
 }
 
 async function removerItem(id: string) {
@@ -200,7 +213,7 @@ const MAX_FALHAS_SERVIDOR = 3;
 // Devolve true se percorreu a fila até o fim; false se parou (sem rede, sessão, erro local).
 async function rodarSync(): Promise<boolean> {
   const userId = estado.userId;
-  if (!userId || !navigator.onLine || !estado.fila.some((i) => i.status === "pendente")) return true;
+  if (encerrado || !userId || !navigator.onLine || !estado.fila.some((i) => i.status === "pendente")) return true;
   set({ sincronizando: true });
   let enviados = 0;
   const falhas: string[] = [];

@@ -249,7 +249,7 @@ const SECOES: Secao[] = [
         titulo: "Promover e rebaixar",
         passos: [
           "Em “Promover aluno”, busque pelo nome ou e-mail.",
-          "Toque em “Promover”. A pessoa passa a ver o botão “Painel admin” no painel dela.",
+          "Toque em “Promover”. A pessoa passa a entrar direto neste painel.",
         ],
         itens: [
           "Só aparece quem já entrou no site com o Google.",

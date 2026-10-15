@@ -13,7 +13,7 @@ import { hojeSaoPaulo } from "./calendario-lib";
 import { getCurrentUser, getOwnDepoimento, getOwnMember, isAdmin } from "./data";
 import { STATUSES } from "./members";
 import { SignOutButton } from "@/components/auth/sign-out-button";
-import { CircleHelp, LayoutDashboard } from "lucide-react";
+import { CircleHelp } from "lucide-react";
 
 export default function DashboardPage() {
   // Dados dependem da sessão (cookies): precisam ficar dentro de Suspense.
@@ -38,6 +38,8 @@ async function DashboardContent() {
   if (!user) redirect("/");
 
   const [member, admin] = await Promise.all([getOwnMember(user.id), isAdmin(user.id)]);
+  // Admin não é aluno: entra direto no painel do admin, sem tela de cadastro.
+  if (admin) redirect("/dashboard/admin");
   const status = STATUSES.find((s) => s.value === member?.status);
   const [calendario, depoimento] = member
     ? await Promise.all([getDadosCalendario(member.id), getOwnDepoimento(member.id)])
@@ -60,13 +62,7 @@ async function DashboardContent() {
             <CircleHelp data-icon="inline-start" />
             Como usar
           </Link>
-          <SignOutButton limparDadosDe={admin ? user.id : undefined} />
-          {admin && (
-            <Link href="/dashboard/admin" className={buttonVariants({ variant: "outline" })}>
-              <LayoutDashboard data-icon="inline-start" />
-              Painel admin
-            </Link>
-          )}
+          <SignOutButton />
         </div>
       </header>
       {member &&

@@ -91,8 +91,8 @@ export function AdminsManager({
         <div className="mb-3 flex items-center gap-1">
           <h2 id="adm-add" className="text-3xl">Promover aluno</h2>
           <Dica titulo="Promover aluno">
-            Só aparece quem já entrou no site com o Google. Depois de promovida, a pessoa vê o botão “Painel admin” no
-            painel dela.
+            Só aparece quem já entrou no site com o Google. Depois de promovida, a pessoa passa a entrar direto
+            neste painel.
           </Dica>
         </div>
         <Label htmlFor="adm-busca">Buscar por nome ou e-mail</Label>

@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { UserRound } from "lucide-react";
+import { SignOutButton } from "@/components/auth/sign-out-button";
 import { AdminNav } from "@/components/dashboard/admin/admin-nav";
 import { PwaAdmin } from "@/components/dashboard/admin/app/pwa";
+import { getCurrentUser } from "../data";
 import { getPendentesCount } from "./queries";
 
 // Contagem de depoimentos pendentes é dado de sessão: busca dentro de Suspense, com a barra
@@ -12,6 +12,13 @@ async function AdminNavComContagem() {
   await connection(); // só no request: o cliente do Supabase lê relógio/cookies
   const pendentes = await getPendentesCount().catch(() => 0);
   return <AdminNav pendentes={pendentes} />;
+}
+
+// Sair apaga do aparelho os dados do app offline deste admin (precisa do id da sessão).
+async function SairAdmin() {
+  await connection();
+  const user = await getCurrentUser();
+  return <SignOutButton variant="ghost" limparDadosDe={user?.id} />;
 }
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -23,10 +30,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <p className="cg-label">Painel do admin</p>
             <PwaAdmin />
           </div>
-          <Link href="/dashboard" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
-            <UserRound aria-hidden className="size-4" />
-            Meu cadastro
-          </Link>
+          <Suspense fallback={<SignOutButton variant="ghost" disabled />}>
+            <SairAdmin />
+          </Suspense>
         </div>
         <Suspense fallback={<AdminNav />}>
           <AdminNavComContagem />

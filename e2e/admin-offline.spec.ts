@@ -278,10 +278,9 @@ test.describe("recusas do servidor e pendências", () => {
     await registrarPagamento(page, aluno.nome);
     await expect(status(page)).toContainText("1 registro aguardando envio");
 
-    // "Meu cadastro" fica fora do app offline: volta a conexão só para abrir a página, com a fila travada.
+    // O logout é Server Action: volta a conexão para ele poder rodar, com a fila travada.
     await page.route("**/api/admin/acoes", (r) => r.abort("internetdisconnected"));
     await context.setOffline(false);
-    await page.goto("/dashboard");
     const sair = page.getByRole("button", { name: "Sair", exact: true });
     await sair.click();
     const dialogo = page.getByRole("dialog");
@@ -289,7 +288,7 @@ test.describe("recusas do servidor e pendências", () => {
     await expect(dialogo).toContainText("1 registro ainda não foi enviado ao servidor.");
     await dialogo.getByRole("button", { name: "Ficar" }).click();
     await expect(dialogo).toHaveCount(0);
-    await expect(page).toHaveURL("/dashboard");
+    await expect(page).toHaveURL("/dashboard/admin");
 
     await sair.click();
     await page.getByRole("dialog").getByRole("button", { name: "Sair e apagar" }).click();

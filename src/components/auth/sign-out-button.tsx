@@ -8,10 +8,12 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { contarFila, limparUsuario } from "@/lib/offline/db";
+import { encerrar } from "@/lib/offline/store";
 
 // Para admin (`limparDadosDe` = id do usuário): o logout apaga os dados do app offline guardados
 // no aparelho. Se ainda houver registros não enviados, pede confirmação antes.
 async function limparAparelho(userId: string) {
+  encerrar();
   await limparUsuario(userId);
   navigator.serviceWorker?.controller?.postMessage("limpar-cache");
   const reg = await navigator.serviceWorker?.getRegistration("/dashboard/admin");

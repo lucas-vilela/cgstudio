@@ -52,16 +52,15 @@ test.describe("aluno logado", () => {
 test.describe("admin logado", () => {
   test.use({ storageState: storageStatePath("admin") });
 
-  test("vê o atalho para o painel do admin e volta para o próprio cadastro", async ({ page }) => {
+  test("entra direto no painel do admin, sem tela de cadastro de aluno", async ({ page }) => {
     await page.goto("/dashboard");
-    await page.getByRole("link", { name: "Painel admin" }).click();
     await expect(page).toHaveURL("/dashboard/admin");
     await expect(page.getByRole("heading", { name: "Alunos", level: 1 })).toBeVisible();
 
     const nav = page.getByRole("navigation", { name: "Painel do admin" });
     await expect(nav.getByRole("link", { name: /Alunos/ })).toHaveAttribute("aria-current", "page");
-    await page.getByRole("link", { name: "Meu cadastro" }).click();
-    await expect(page).toHaveURL("/dashboard");
+    await expect(page.getByRole("link", { name: "Meu cadastro" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Sair", exact: true })).toBeEnabled();
   });
 });
 
@@ -98,8 +97,7 @@ test.describe("logout", () => {
     }));
     await expect.poll(snapshots).toBe(1);
 
-    await page.goto("/dashboard");
-    await page.getByRole("button", { name: "Sair" }).click();
+    await page.getByRole("button", { name: "Sair", exact: true }).click();
     await expect(page).toHaveURL("/");
     expect(await snapshots()).toBe(0);
   });
