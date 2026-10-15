@@ -56,6 +56,7 @@ test.describe("admin logado", () => {
     await page.goto("/dashboard");
     await expect(page).toHaveURL("/dashboard/admin");
     await expect(page.getByRole("heading", { name: "Alunos", level: 1 })).toBeVisible();
+    await expect(page.getByText("Olá, Camila", { exact: true })).toBeVisible();
 
     const nav = page.getByRole("navigation", { name: "Painel do admin" });
     await expect(nav.getByRole("link", { name: /Alunos/ })).toHaveAttribute("aria-current", "page");
