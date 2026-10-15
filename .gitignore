@@ -52,3 +52,8 @@ next-env.d.ts
 /blob-report/
 /playwright/.cache/
 /e2e/.auth/
+
+# ferramentas locais do Claude/Playwright (não versionadas)
+/.claude/agents/
+/.claude/skills/playwright-cli/
+/specs/
