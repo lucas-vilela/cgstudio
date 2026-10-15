@@ -66,10 +66,10 @@ export async function exportarPlanilha(visao: Visao, fila: ItemFila[]) {
   ];
   const medida = (v: number | null): Cell => (v == null ? null : { value: v, type: Number, format: "0.0" });
   const medidas: Row[] = [
-    ["Aluno", "Data", ...MEDIDAS.map((m) => `${m.rotulo} (${m.unidade})`), "Observação"].map(titulo),
+    ["Aluno", "Data", ...MEDIDAS.map((m) => `${m.rotulo} (${m.unidade})`), "Observação", "Percepções do aluno"].map(titulo),
     ...[...visao.avaliacoes.values()].flat()
       .sort((a, b) => (nomeDe.get(a.member_id) ?? "").localeCompare(nomeDe.get(b.member_id) ?? "") || a.data.localeCompare(b.data))
-      .map((a): Row => [txt(nomeDe.get(a.member_id)), formatDate(a.data), ...MEDIDAS.map((m) => medida(a[m.campo])), txt(a.observacao)]),
+      .map((a): Row => [txt(nomeDe.get(a.member_id)), formatDate(a.data), ...MEDIDAS.map((m) => medida(a[m.campo])), txt(a.observacao), txt(a.percepcoes)]),
   ];
 
   const sheets = [
@@ -78,7 +78,7 @@ export async function exportarPlanilha(visao: Visao, fila: ItemFila[]) {
     { sheet: "Horários", data: horarios, columns: [{ width: 10 }, { width: 8 }, { width: 8 }, { width: 11 }, { width: 10 }, { width: 8 }, { width: 60 }] },
     { sheet: "Planos", data: planos, columns: [{ width: 12 }, { width: 16 }, { width: 16 }, { width: 40 }, { width: 10 }] },
     { sheet: "Anamnese", data: anamneses, columns: [{ width: 30 }, ...campos.map(() => ({ width: 28 })), { width: 14 }] },
-    { sheet: "Medidas", data: medidas, columns: [{ width: 30 }, { width: 12 }, ...MEDIDAS.map(() => ({ width: 14 })), { width: 40 }] },
+    { sheet: "Medidas", data: medidas, columns: [{ width: 30 }, { width: 12 }, ...MEDIDAS.map(() => ({ width: 14 })), { width: 40 }, { width: 60 }] },
   ];
 
   const pendentes = fila.filter((i) => i.status === "pendente" || i.status === "erro");

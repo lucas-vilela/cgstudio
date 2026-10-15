@@ -23,11 +23,11 @@ const comoAdminInserir = async (tabela: string, row: Record<string, unknown>) =>
 const anamneseNoBanco = async (memberId: string) =>
   ok(await db.from("member_anamneses").select("*").eq("member_id", memberId).maybeSingle()) as Record<string, unknown> | null;
 const avaliacoesNoBanco = async (memberId: string) =>
-  (ok(await db.from("member_avaliacoes").select("id,data,peso_kg,cintura_cm,quadril_cm,observacao").eq("member_id", memberId)) as
-    { id: string; data: string; peso_kg: number | null; cintura_cm: number | null; quadril_cm: number | null; observacao: string | null }[])
+  (ok(await db.from("member_avaliacoes").select("id,data,peso_kg,cintura_cm,quadril_cm,observacao,percepcoes").eq("member_id", memberId)) as
+    { id: string; data: string; peso_kg: number | null; cintura_cm: number | null; quadril_cm: number | null; observacao: string | null; percepcoes: string | null }[])
     .map((a) => ({ ...a, peso_kg: a.peso_kg == null ? null : Number(a.peso_kg), cintura_cm: a.cintura_cm == null ? null : Number(a.cintura_cm) }));
 
-const aba = (page: Page, nome: "Resumo" | "Anamnese" | "Medidas") => page.getByRole("tab", { name: nome });
+const aba = (page: Page, nome: "Resumo" | "Anamnese" | "Medidas" | "Acompanhamento") => page.getByRole("tab", { name: nome });
 const simNao = (page: Page, pergunta: string | RegExp) =>
   page.getByRole("radiogroup", { name: pergunta });
 
@@ -85,7 +85,7 @@ test.describe("ficha da Ana (seed, só leitura)", () => {
 
     await aba(page, "Medidas").click();
     await expect(page).toHaveURL(`/dashboard/admin/aluno?id=${ANA}&aba=medidas`);
-    await expect(page.getByText("2 avaliações")).toBeVisible();
+    await expect(page.getByText("4 avaliações")).toBeVisible();
     const ultima = page.locator("section").filter({ has: page.getByRole("heading", { name: /^Última ·/ }) });
     await expect(ultima).toContainText("66,2 kg");
     await expect(ultima).toContainText("−2,3 kg desde");
@@ -234,6 +234,7 @@ test.describe("medidas", () => {
     await expect(dialogo.getByRole("alert")).toHaveText("A data da avaliação não pode ser no futuro.");
     await dialogo.getByLabel("Data").fill(hojeSP());
     await dialogo.getByLabel("Observação (opcional)").fill("Avaliação inicial");
+    await dialogo.getByLabel("Percepções do aluno (opcional)").fill("  Dorme melhor desde que começou.  ");
 
     const envio = esperarEnvioFila(page, "avaliacao_salvar");
     await salvar.click();
@@ -242,13 +243,17 @@ test.describe("medidas", () => {
     expect(pedido.payload).toEqual({
       id: expect.stringMatching(/^[0-9a-f-]{36}$/), member_id: aluno.id, data: hojeSP(),
       peso_kg: 70.5, cintura_cm: 80, quadril_cm: null, coxa_cm: null, peito_cm: null, braco_cm: null,
-      observacao: "Avaliação inicial",
+      observacao: "Avaliação inicial", percepcoes: "Dorme melhor desde que começou.",
     });
     await expect(toast(page, "Medidas registradas.")).toBeVisible();
     expect(await avaliacoesNoBanco(aluno.id)).toEqual([
-      { id: pedido.payload.id, data: hojeSP(), peso_kg: 70.5, cintura_cm: 80, quadril_cm: null, observacao: "Avaliação inicial" },
+      {
+        id: pedido.payload.id, data: hojeSP(), peso_kg: 70.5, cintura_cm: 80, quadril_cm: null,
+        observacao: "Avaliação inicial", percepcoes: "Dorme melhor desde que começou.",
+      },
     ]);
     await expect(page.getByRole("heading", { name: `Última · ${dataBR(hojeSP())}` })).toBeVisible();
+    await expect(page.getByText("Dorme melhor desde que começou.")).toBeVisible();
   });
 
   test("corrigir usa o mesmo id (upsert) e excluir apaga do banco", async ({ page, fabrica }) => {
@@ -276,5 +281,63 @@ test.describe("medidas", () => {
     await expect(toast(page, "Avaliação excluída.")).toBeVisible();
     expect(await avaliacoesNoBanco(aluno.id)).toEqual([]);
     await expect(page.getByText("Nenhuma avaliação ainda.")).toBeVisible();
+  });
+});
+
+test.describe("acompanhamento", () => {
+  test("Ana (seed): gráficos, variação, percepções e tabela batem com o banco", async ({ page }) => {
+    const asc = (ok(await db.from("member_avaliacoes").select("data,peso_kg,percepcoes").eq("member_id", ANA).order("data")) as
+      { data: string; peso_kg: string; percepcoes: string | null }[]);
+    expect(asc, "seed: 4 avaliações da Ana").toHaveLength(4);
+
+    await abrirAdmin(page, `/dashboard/admin/aluno?id=${ANA}&aba=acompanhamento`);
+    await expect(aba(page, "Acompanhamento")).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByText(`4 avaliações, de ${dataBR(asc[0].data)} a ${dataBR(asc[3].data)}`)).toBeVisible();
+
+    const peso = page.locator("section").filter({ has: page.getByRole("heading", { name: "Peso", exact: true }) });
+    await expect(peso).toContainText("66,2 kg");
+    await expect(peso).toContainText(`−2,3 kg desde ${dataBR(asc[0].data)}`);
+    // Gráfico pelo teclado: Home vai para a primeira medição e o valor é anunciado.
+    const grafico = peso.getByRole("group", { name: /^Peso: 68,5 kg em/ });
+    await grafico.focus();
+    await page.keyboard.press("Home");
+    await expect(peso.locator("[aria-live]")).toHaveText(`68,5 kg em ${dataBR(asc[0].data)}`);
+    await page.keyboard.press("ArrowRight");
+    await expect(peso.locator("[aria-live]")).toHaveText(`67,9 kg em ${dataBR(asc[1].data)}`);
+
+    const variacao = page.locator("section").filter({ has: page.getByRole("heading", { name: "Variação das medidas" }) });
+    const cintura = variacao.getByRole("listitem").filter({ hasText: "Cintura" });
+    await expect(cintura).toContainText("74 → 71,5 cm");
+    await expect(cintura).toContainText("−2,5 cm");
+    await expect(variacao.getByRole("listitem").filter({ hasText: "Braço" })).toContainText("+0,5 cm");
+
+    const circ = page.locator("section").filter({ has: page.getByRole("heading", { name: "Circunferências" }) });
+    await expect(circ.getByRole("group")).toHaveCount(5);
+
+    const percepcoes = page.locator("section").filter({ has: page.getByRole("heading", { name: "Percepções do aluno" }) });
+    await expect(percepcoes.getByRole("listitem")).toHaveCount(asc.filter((a) => a.percepcoes).length);
+    await expect(percepcoes.getByRole("listitem").first()).toContainText(asc[3].percepcoes!); // mais recente primeiro
+
+    await page.getByText("Ver todas as medidas em tabela").click();
+    await expect(page.getByRole("table").getByRole("row")).toHaveCount(5); // cabeçalho + 4
+  });
+
+  test("sem avaliação: convite para a primeira; com uma só: avisa que os gráficos vêm na segunda", async ({ page, fabrica }) => {
+    const aluno = await fabrica.aluno({ login: false, status: "ativo" });
+    await abrirAdmin(page, `/dashboard/admin/aluno?id=${aluno.id}&aba=acompanhamento`);
+    await expect(page.getByText("Registre a primeira avaliação para começar o acompanhamento.")).toBeVisible();
+
+    await page.getByRole("button", { name: "Nova avaliação" }).click();
+    const dialogo = page.getByRole("dialog");
+    await dialogo.getByLabel("Peso (kg)").fill("70");
+    await dialogo.getByLabel("Percepções do aluno (opcional)").fill("Mais disposição de manhã.");
+    const envio = esperarEnvioFila(page, "avaliacao_salvar");
+    await dialogo.getByRole("button", { name: "Salvar" }).click();
+    expect((await envio).resposta).toEqual({ ok: true });
+
+    await expect(aba(page, "Acompanhamento")).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByText("Os gráficos aparecem a partir da segunda avaliação.")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Peso", exact: true })).toHaveCount(0);
+    await expect(page.getByText("Mais disposição de manhã.")).toBeVisible();
   });
 });

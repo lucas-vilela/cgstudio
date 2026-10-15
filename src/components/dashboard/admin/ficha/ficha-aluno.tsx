@@ -17,13 +17,14 @@ import { RegisterPaymentButton } from "../register-payment-dialog";
 import { Panel } from "../section";
 import { Tag } from "../tag";
 import { AlertaSaude } from "./alerta";
+import { Acompanhamento } from "./acompanhamento";
 import { AnamneseForm } from "./anamnese-form";
-import { Medidas } from "./medidas";
+import { AvaliacaoForm, Medidas } from "./medidas";
 import { Resumo } from "./resumo";
 import { Dica } from "@/components/ajuda/dica";
 
-type Aba = "resumo" | "anamnese" | "medidas";
-const ABAS: Aba[] = ["resumo", "anamnese", "medidas"];
+type Aba = "resumo" | "anamnese" | "medidas" | "acompanhamento";
+const ABAS: Aba[] = ["resumo", "anamnese", "medidas", "acompanhamento"];
 
 
 function Voltar() {
@@ -39,6 +40,7 @@ export function FichaAluno({ visao, memberId }: { visao: Visao; memberId: string
   const pedida = useQuery().get("aba");
   const aba: Aba = ABAS.includes(pedida as Aba) ? (pedida as Aba) : "resumo";
   const [editando, setEditando] = useState(false);
+  const [novaAvaliacao, setNovaAvaliacao] = useState(false);
   const m = visao.members.find((x) => x.member_id === memberId);
   const anamnese = visao.anamneses.get(memberId);
   const avaliacoes = visao.avaliacoes.get(memberId) ?? [];
@@ -88,7 +90,8 @@ export function FichaAluno({ visao, memberId }: { visao: Visao; memberId: string
           )}
           <Dica titulo="Ficha do aluno">
             Resumo junta cuidados, plano, horários, medidas e pagamentos. Na Anamnese, respostas que pedem cuidado geram o
-            alerta de saúde. Em Medidas, registre cada avaliação para acompanhar a evolução. O telefone abre o WhatsApp.
+            alerta de saúde. Em Medidas, registre cada avaliação; Acompanhamento mostra a evolução em gráficos e as
+            percepções do aluno. O telefone abre o WhatsApp.
           </Dica>
         </div>
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
@@ -116,10 +119,11 @@ export function FichaAluno({ visao, memberId }: { visao: Visao; memberId: string
       <AlertaSaude anamnese={anamnese} />
 
       <Tabs value={aba} onValueChange={(v) => irPara(v as Aba)} className="gap-4">
-        <TabsList className="grid w-full grid-cols-3 group-data-horizontal/tabs:h-auto sm:flex sm:w-fit">
+        <TabsList className="grid w-full grid-cols-2 group-data-horizontal/tabs:h-auto sm:flex sm:w-fit">
           <TabsTrigger value="resumo" className={trigger}>Resumo</TabsTrigger>
           <TabsTrigger value="anamnese" className={trigger}>Anamnese</TabsTrigger>
           <TabsTrigger value="medidas" className={trigger}>Medidas</TabsTrigger>
+          <TabsTrigger value="acompanhamento" className={trigger}>Acompanhamento</TabsTrigger>
         </TabsList>
         <TabsContent value="resumo">
           <Resumo m={m} visao={visao} anamnese={anamnese} avaliacoes={avaliacoes} irPara={irPara} />
@@ -131,8 +135,19 @@ export function FichaAluno({ visao, memberId }: { visao: Visao; memberId: string
           <Medidas memberId={memberId} nome={m.nome} avaliacoes={avaliacoes}
             doServidor={new Set((visao.snapshot.avaliacoes ?? []).map((a) => a.id))} />
         </TabsContent>
+        <TabsContent value="acompanhamento">
+          <Acompanhamento avaliacoes={avaliacoes} onNova={() => setNovaAvaliacao(true)} />
+        </TabsContent>
       </Tabs>
 
+      <Dialog open={novaAvaliacao} onOpenChange={setNovaAvaliacao}>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto">
+          {novaAvaliacao && (
+            <AvaliacaoForm memberId={memberId} nome={m.nome} avaliacao={null} naServidor={false}
+              onClose={() => setNovaAvaliacao(false)} />
+          )}
+        </DialogContent>
+      </Dialog>
       <Dialog open={editando} onOpenChange={setEditando}>
         <DialogContent className="max-h-[90dvh] overflow-y-auto">
           {editando && (

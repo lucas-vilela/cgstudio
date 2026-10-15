@@ -42,6 +42,7 @@ export function AvaliacaoForm({
     () => Object.fromEntries(MEDIDAS.map((m) => [m.campo, medidaInput(avaliacao?.[m.campo] ?? null)])) as Record<CampoMedida, string>,
   );
   const [observacao, setObservacao] = useState(avaliacao?.observacao ?? "");
+  const [percepcoes, setPercepcoes] = useState(avaliacao?.percepcoes ?? "");
   const [erro, setErro] = useState("");
   const [pendente, setPendente] = useState(false);
   const [confirmarExclusao, setConfirmarExclusao] = useState(false);
@@ -59,7 +60,7 @@ export function AvaliacaoForm({
       medidas[m.campo] = v;
     }
     const v = validarAvaliacao(
-      { id: avaliacao?.id ?? novoId(), member_id: memberId, data, ...medidas, observacao },
+      { id: avaliacao?.id ?? novoId(), member_id: memberId, data, ...medidas, observacao, percepcoes },
       hoje,
     );
     if ("error" in v) return setErro(v.error);
@@ -118,6 +119,15 @@ export function AvaliacaoForm({
       <div className="grid gap-1.5">
         <Label htmlFor="av-obs">Observação (opcional)</Label>
         <Textarea id="av-obs" value={observacao} maxLength={500} onChange={(e) => setObservacao(e.target.value)} />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor="av-percepcoes">Percepções do aluno (opcional)</Label>
+        <Textarea id="av-percepcoes" value={percepcoes} maxLength={1000} rows={4}
+          onChange={(e) => setPercepcoes(e.target.value)} aria-describedby="av-percepcoes-ajuda"
+          placeholder="Ex.: dorme melhor, sobe escada sem cansar, a dor no ombro voltou…" />
+        <p id="av-percepcoes-ajuda" className="text-xs text-muted-foreground">
+          O que o aluno sente que melhorou ou piorou e a fita não mede. Aparece em Acompanhamento.
+        </p>
       </div>
       {erro && <p role="alert" className="text-sm text-destructive">{erro}</p>}
       <DialogFooter className="sm:justify-between">
@@ -196,6 +206,12 @@ export function Medidas({
             })}
           </dl>
           {ultima.observacao && <p className="mt-3 text-sm text-muted-foreground">{ultima.observacao}</p>}
+          {ultima.percepcoes && (
+            <div className="mt-3 rounded-lg border border-border bg-surface-2 p-3">
+              <p className="text-xs text-muted-foreground">Percepções do aluno</p>
+              <p className="mt-1 text-sm whitespace-pre-line">{ultima.percepcoes}</p>
+            </div>
+          )}
         </Panel>
       ) : (
         <Panel><EmptyNote>Registre a avaliação física inicial para comparar depois.</EmptyNote></Panel>

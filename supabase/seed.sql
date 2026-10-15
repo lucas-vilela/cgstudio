@@ -139,13 +139,19 @@ select id, '1990-05-12', 'Rua das Flores, 123',
        'Aquecer bem antes de agachamentos'
   from public.members where email = 'ana@cgstudio.test';
 
-insert into public.member_avaliacoes (id, member_id, data, peso_kg, cintura_cm, quadril_cm, braco_cm)
-select gen_random_uuid(), id, a.data, a.peso, a.cintura, a.quadril, a.braco
+insert into public.member_avaliacoes
+  (id, member_id, data, peso_kg, cintura_cm, quadril_cm, coxa_cm, peito_cm, braco_cm, percepcoes)
+select gen_random_uuid(), id, a.data, a.peso, a.cintura, a.quadril, a.coxa, a.peito, a.braco, a.percepcoes
   from public.members
   cross join (values
-    (current_date - 60, 68.5, 74.0, 98.0, 28.0),
-    (current_date - 5,  66.2, 71.5, 96.5, 28.5)
-  ) as a (data, peso, cintura, quadril, braco)
+    (current_date - 60, 68.5, 74.0, 98.0, 56.0, 92.0, 28.0,
+     'Cansa ao subir a escada do trabalho. Acorda com dor na lombar quase todo dia.'),
+    (current_date - 40, 67.9, 73.2, 97.6, 55.5, 91.5, 28.1,
+     'A dor na lombar diminuiu bastante. Na escada ainda precisa parar no meio.'),
+    (current_date - 20, 67.0, 72.4, 97.0, 55.2, 91.0, 28.4, null),
+    (current_date - 5,  66.2, 71.5, 96.5, 54.5, 90.5, 28.5,
+     'Sobe a escada sem parar e dorme melhor. O joelho esquerdo incomodou na semana passada.')
+  ) as a (data, peso, cintura, quadril, coxa, peito, braco, percepcoes)
  where email = 'ana@cgstudio.test';
 
 -- ---------------------------------------------------------------- depoimentos

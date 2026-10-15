@@ -139,7 +139,7 @@ export async function getAvaliacoes(): Promise<Avaliacao[]> {
     (de, ate) =>
       supabase
         .from("member_avaliacoes")
-        .select("id,member_id,data,peso_kg,cintura_cm,quadril_cm,coxa_cm,peito_cm,braco_cm,observacao")
+        .select("id,member_id,data,peso_kg,cintura_cm,quadril_cm,coxa_cm,peito_cm,braco_cm,observacao,percepcoes")
         .order("member_id").order("data", { ascending: false }).order("id")
         .range(de, ate),
     "member_avaliacoes",

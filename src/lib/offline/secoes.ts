@@ -10,7 +10,7 @@ const SECOES = new Set(["/dashboard/admin", "/dashboard/admin/financeiro", "/das
 export const ehSecaoOffline = (path: string) => SECOES.has(path);
 export const ehFicha = (path: string) => path === FICHA;
 
-export const fichaHref = (memberId: string, aba?: "anamnese" | "medidas") =>
+export const fichaHref = (memberId: string, aba?: "anamnese" | "medidas" | "acompanhamento") =>
   `${FICHA}?id=${encodeURIComponent(memberId)}${aba ? `&aba=${aba}` : ""}`;
 
 // A query muda sem o pathname mudar (de uma ficha para outra, troca de aba): quem navega avisa com

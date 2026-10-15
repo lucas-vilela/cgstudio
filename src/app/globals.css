@@ -78,6 +78,9 @@
   --chart-3: rgb(255 255 255 / 62%);
   --chart-4: rgb(255 255 255 / 40%);
   --chart-5: rgb(255 255 255 / 20%);
+  /* Gráficos de acompanhamento: polos da variação (validados no fundo escuro, sem ser cor de status). */
+  --viz-diminui: #3987e5;
+  --viz-aumenta: #d95926;
   --radius: 1rem;
   --sidebar: var(--surface);
   --sidebar-foreground: #ffffff;

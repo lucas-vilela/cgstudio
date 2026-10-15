@@ -116,8 +116,20 @@ const SECOES: Secao[] = [
         passos: [
           "Na aba Medidas, toque em “Nova avaliação”.",
           "Preencha a data e as medidas que tiver (peso, cintura, quadril, coxas, peito, braço).",
+          "Em “Percepções do aluno”, anote o que ele sente que melhorou ou piorou e não dá para medir: sono, disposição, dores, força no dia a dia.",
           "Salve. A última avaliação aparece em destaque e as anteriores ficam em “Todas as avaliações”, com “Corrigir” em cada uma.",
         ],
+      },
+      {
+        titulo: "Acompanhamento",
+        itens: [
+          <><b>Peso:</b> gráfico de linha com o valor atual e quanto mudou desde a primeira avaliação.</>,
+          <><b>Variação das medidas:</b> barras que mostram, de uma vez, quais circunferências diminuíram e quais aumentaram.</>,
+          <><b>Circunferências:</b> um gráfico pequeno por medida, cada um na própria escala.</>,
+          <><b>Percepções do aluno:</b> tudo o que foi anotado nas avaliações, da mais recente para a mais antiga.</>,
+        ],
+        texto: "Os gráficos aparecem a partir da segunda avaliação. As datas ficam na distância real entre elas, e passar o mouse ou tocar mostra o valor de cada data.",
+        dica: "Abaixo dos gráficos, “Ver todas as medidas em tabela” mostra os números exatos.",
       },
     ],
   },

@@ -173,6 +173,8 @@ export type Avaliacao = {
   peito_cm: number | null;
   braco_cm: number | null;
   observacao: string | null;
+  /** O que o aluno sente que melhorou ou piorou e não dá para medir. Ausente em dados antigos do aparelho. */
+  percepcoes: string | null;
 };
 
 export const MEDIDAS = [
@@ -197,7 +199,7 @@ export function validarAvaliacao(a: unknown, hoje: string): { data: Avaliacao } 
   const out: Avaliacao = {
     id: p.id, member_id: p.member_id, data: p.data,
     peso_kg: null, cintura_cm: null, quadril_cm: null, coxa_cm: null, peito_cm: null, braco_cm: null,
-    observacao: null,
+    observacao: null, percepcoes: null,
   };
   let alguma = false;
   for (const m of MEDIDAS) {
@@ -214,6 +216,12 @@ export function validarAvaliacao(a: unknown, hoje: string): { data: Avaliacao } 
     const t = p.observacao.trim();
     if (t.length > 500) return { error: "Observação: até 500 caracteres." };
     out.observacao = t || null;
+  }
+  if (p.percepcoes != null) {
+    if (typeof p.percepcoes !== "string") return { error: "Medidas inválidas." };
+    const t = p.percepcoes.trim();
+    if (t.length > 1000) return { error: "Percepções do aluno: até 1000 caracteres." };
+    out.percepcoes = t || null;
   }
   return { data: out };
 }
