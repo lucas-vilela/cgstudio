@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { atualizar, sincronizar } from "@/lib/offline/store";
 import { useAdminEstado } from "@/lib/offline/use-admin";
 import type { Visao } from "@/lib/offline/visao";
+import { Dica } from "@/components/ajuda/dica";
 
 const hora = (iso: string) =>
   new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
@@ -40,6 +41,10 @@ export function StatusConexao({ visao }: { visao: Visao | null }) {
       <span className="inline-flex items-center gap-1.5 font-semibold">
         {e.online ? <Wifi aria-hidden className="size-4" /> : <CloudOff aria-hidden className="size-4 text-accent" />}
         {e.online ? "Online" : "Offline"}
+        <Dica titulo="Funciona sem internet" className="-my-2">
+          Alunos, Financeiro e Calendário ficam salvos neste aparelho. Sem conexão, o que você registrar fica guardado
+          e é enviado sozinho quando a internet voltar. “Exportar planilha” baixa um backup de tudo.
+        </Dica>
       </span>
       {e.snapshot && (
         <span className="text-muted-foreground">Dados de {hora(e.snapshot.gerado_em)}</span>

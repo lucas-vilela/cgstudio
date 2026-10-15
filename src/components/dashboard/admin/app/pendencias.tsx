@@ -16,6 +16,7 @@ import { LinkAluno } from "../link-aluno";
 import { MemberForm } from "../members-table";
 import { PaymentForm } from "../register-payment-dialog";
 import { Panel } from "../section";
+import { Dica } from "@/components/ajuda/dica";
 
 function Linha({ item, visao, onCorrigir }: { item: ItemFila; visao: Visao; onCorrigir: () => void }) {
   const [confirmar, setConfirmar] = useState(false);
@@ -65,7 +66,13 @@ export function Pendencias({ visao }: { visao: Visao }) {
 
   return (
     <Panel id="pendencias" aria-labelledby="pend-title" className="border-accent/60">
-      <h2 id="pend-title" className="text-3xl">Pendências com erro</h2>
+      <div className="flex items-center gap-1">
+        <h2 id="pend-title" className="text-3xl">Pendências com erro</h2>
+        <Dica titulo="Pendências com erro">
+          “Corrigir” abre o formulário para ajustar. “Tentar de novo” reenvia igual (útil se foi falha de conexão).
+          “Descartar” apaga o registro e não tem volta.
+        </Dica>
+      </div>
       <p className="mb-3 text-sm text-muted-foreground">
         O servidor não aceitou estes registros. Corrija e envie de novo, ou descarte.
       </p>

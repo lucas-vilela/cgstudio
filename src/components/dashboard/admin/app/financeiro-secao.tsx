@@ -8,6 +8,7 @@ import type { Visao } from "@/lib/offline/visao";
 import { InadimplentesTable } from "../inadimplentes-table";
 import { PagamentosTable } from "../pagamentos-table";
 import { Panel } from "../section";
+import { Dica } from "@/components/ajuda/dica";
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
@@ -59,7 +60,12 @@ export function FinanceiroSecao({ visao }: { visao: Visao }) {
       </p>
 
       <Panel aria-labelledby="inad-title">
-        <h2 id="inad-title" className="text-3xl">Inadimplentes</h2>
+        <div className="flex items-center gap-1">
+          <h2 id="inad-title" className="text-3xl">Inadimplentes</h2>
+          <Dica titulo="Inadimplentes">
+            Quem tem pagamento aguardando envio aparece marcado: não cobre de novo, ele só ainda não chegou ao servidor.
+          </Dica>
+        </div>
         <p className="mb-3 text-sm text-muted-foreground">Alunos com vencimento passado (não conta pendentes).</p>
         <InadimplentesTable items={visao.snapshot.inadimplentes} pendentes={visao.pagamentosPendentes} />
       </Panel>
@@ -67,7 +73,12 @@ export function FinanceiroSecao({ visao }: { visao: Visao }) {
       <Panel aria-labelledby="hist-title">
         <div className="mb-4 flex flex-col gap-3">
           <div>
-            <h2 id="hist-title" className="text-3xl">{alunoId ? `Histórico de ${alunoNome}` : "Pagamentos do mês"}</h2>
+            <div className="flex items-center gap-1">
+              <h2 id="hist-title" className="text-3xl">{alunoId ? `Histórico de ${alunoNome}` : "Pagamentos do mês"}</h2>
+              {!alunoId && (
+                <Dica titulo="Histórico do aluno">Toque no nome de um aluno para ver todos os pagamentos dele.</Dica>
+              )}
+            </div>
             {alunoId && (
               <button type="button" onClick={() => setAlunoId(null)}
                 className="min-h-11 text-sm text-muted-foreground underline-offset-4 hover:underline md:min-h-0">

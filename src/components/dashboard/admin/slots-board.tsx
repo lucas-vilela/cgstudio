@@ -21,6 +21,7 @@ import { LinkAluno } from "./link-aluno";
 import { EmptyNote } from "./section";
 import { Tag } from "./tag";
 import { Pencil, Plus, Power, PowerOff, Search, UserMinus, UserPlus, Users } from "lucide-react";
+import { Dica } from "@/components/ajuda/dica";
 
 const DAY_OPTIONS = DIAS.map((label, i) => ({ value: String(i), label }));
 const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
@@ -73,7 +74,12 @@ function SlotForm({ slot, onClose }: { slot: SlotVisao | null; onClose: () => vo
         </div>
       </div>
       <div className="grid gap-1.5">
-        <Label htmlFor="sl-cap">Capacidade</Label>
+        <div className="flex items-center gap-1">
+          <Label htmlFor="sl-cap">Capacidade</Label>
+          <Dica titulo="Limite de alunos" className="-my-2">
+            Limite de alunos para quem entra pelo painel do aluno. Você, como admin, pode adicionar acima dele.
+          </Dica>
+        </div>
         <Input id="sl-cap" type="number" min={1} max={50} value={cap} onChange={(e) => setCap(e.target.value)} className="h-10 md:h-8" />
       </div>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
@@ -132,7 +138,12 @@ function SlotAlunos({
         </DialogDescription>
       </DialogHeader>
       <div className="grid gap-1.5">
-        <Label htmlFor="sl-busca">Adicionar aluno</Label>
+        <div className="flex items-center gap-1">
+          <Label htmlFor="sl-busca">Adicionar aluno</Label>
+          <Dica titulo="Admin pode tudo" className="-my-2">
+            Dá para passar da capacidade, do limite do plano ou incluir aluno não ativo. O sistema só avisa, não bloqueia.
+          </Dica>
+        </div>
         <div className="relative">
           <Search aria-hidden className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input id="sl-busca" value={busca} onChange={(e) => setBusca(e.target.value)} autoComplete="off"

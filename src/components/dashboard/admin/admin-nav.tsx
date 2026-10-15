@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { navegar } from "@/lib/offline/navegacao";
 import { ehFicha } from "@/lib/offline/secoes";
 import { cn } from "@/lib/utils";
-import { CalendarDays, LayoutTemplate, ShieldCheck, Users, Wallet } from "lucide-react";
+import { CalendarDays, CircleHelp, LayoutTemplate, ShieldCheck, Users, Wallet } from "lucide-react";
 
 const ITEMS = [
   { href: "/dashboard/admin", label: "Alunos", icon: Users },
@@ -14,6 +14,7 @@ const ITEMS = [
   { href: "/dashboard/admin/calendario", label: "Calendário", icon: CalendarDays },
   { href: "/dashboard/admin/conteudo", label: "Conteúdo", icon: LayoutTemplate },
   { href: "/dashboard/admin/admins", label: "Admins", icon: ShieldCheck },
+  { href: "/dashboard/admin/ajuda", label: "Ajuda", icon: CircleHelp },
 ];
 
 // Alunos (e a ficha de cada aluno), Financeiro e Calendário são o mesmo app de cliente (funciona

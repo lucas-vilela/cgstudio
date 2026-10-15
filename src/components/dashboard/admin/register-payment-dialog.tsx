@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FieldSelect } from "./field-select";
 import { Banknote } from "lucide-react";
+import { Dica } from "@/components/ajuda/dica";
 
 // `pendente`: já há um pagamento deste aluno aguardando envio (evita registrar em dobro).
 export type PaymentTarget = { id: string; nome: string | null; valor: number | null; pendente?: boolean };
@@ -83,7 +84,13 @@ function PaymentForm({
           options={FORMAS} />
       </div>
       <div className="grid gap-1.5">
-        <Label htmlFor="pg-data">Data do pagamento</Label>
+        <div className="flex items-center gap-1">
+          <Label htmlFor="pg-data">Data do pagamento</Label>
+          <Dica titulo="Como o vencimento avança" className="-my-2">
+            Soma 1 mês: ao vencimento atual se o aluno pagou antes de vencer, ou à data do pagamento se já tinha vencido.
+            31/01 vira 28/02.
+          </Dica>
+        </div>
         <Input id="pg-data" type="date" value={data} onChange={(e) => setData(e.target.value)}
           className="h-10 md:h-8" />
       </div>

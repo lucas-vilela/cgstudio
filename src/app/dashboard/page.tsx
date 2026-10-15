@@ -13,7 +13,7 @@ import { hojeSaoPaulo } from "./calendario-lib";
 import { getCurrentUser, getOwnDepoimento, getOwnMember, isAdmin } from "./data";
 import { STATUSES } from "./members";
 import { SignOutButton } from "@/components/auth/sign-out-button";
-import { LayoutDashboard } from "lucide-react";
+import { CircleHelp, LayoutDashboard } from "lucide-react";
 
 export default function DashboardPage() {
   // Dados dependem da sessão (cookies): precisam ficar dentro de Suspense.
@@ -56,6 +56,10 @@ async function DashboardContent() {
               {status.label}
             </Badge>
           )}
+          <Link href="/dashboard/ajuda" className={buttonVariants({ variant: "ghost" })}>
+            <CircleHelp data-icon="inline-start" />
+            Como usar
+          </Link>
           <SignOutButton limparDadosDe={admin ? user.id : undefined} />
           {admin && (
             <Link href="/dashboard/admin" className={buttonVariants({ variant: "outline" })}>

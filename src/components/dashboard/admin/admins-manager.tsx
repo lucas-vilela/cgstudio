@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { EmptyNote, Panel } from "./section";
 import { Tag } from "./tag";
 import { UserMinus, UserPlus } from "lucide-react";
+import { Dica } from "@/components/ajuda/dica";
 
 function Person({ u }: { u: AdminUser }) {
   return (
@@ -87,7 +88,13 @@ export function AdminsManager({
       </Panel>
 
       <Panel aria-labelledby="adm-add">
-        <h2 id="adm-add" className="mb-3 text-3xl">Promover aluno</h2>
+        <div className="mb-3 flex items-center gap-1">
+          <h2 id="adm-add" className="text-3xl">Promover aluno</h2>
+          <Dica titulo="Promover aluno">
+            Só aparece quem já entrou no site com o Google. Depois de promovida, a pessoa vê o botão “Painel admin” no
+            painel dela.
+          </Dica>
+        </div>
         <Label htmlFor="adm-busca">Buscar por nome ou e-mail</Label>
         <Input id="adm-busca" value={query} onChange={(e) => setQuery(e.target.value)}
           placeholder="Digite para buscar" autoComplete="off" className="mt-1.5 h-10 md:h-8" />

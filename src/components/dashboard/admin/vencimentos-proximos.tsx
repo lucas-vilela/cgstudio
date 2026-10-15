@@ -7,11 +7,18 @@ import { RegisterPaymentButton } from "./register-payment-dialog";
 import { EmptyNote, Panel } from "./section";
 import { Tag } from "./tag";
 import { LinkAluno } from "./link-aluno";
+import { Dica } from "@/components/ajuda/dica";
 
 export function VencimentosProximos({ items, pendentes }: { items: Vencimento[]; pendentes?: Set<string> }) {
   return (
     <Panel aria-labelledby="venc-title">
-      <h2 id="venc-title" className="text-3xl">Vencimentos próximos</h2>
+      <div className="flex items-center gap-1">
+        <h2 id="venc-title" className="text-3xl">Vencimentos próximos</h2>
+        <Dica titulo="Vencimentos próximos">
+          Use “Registrar” para lançar o pagamento aqui mesmo. Pagando antes de vencer, o mês é somado ao vencimento
+          atual (ex.: 10/03 vira 10/04), então o aluno não perde dias.
+        </Dica>
+      </div>
       <p className="mb-3 text-sm text-muted-foreground">Quem vence nos próximos 5 dias.</p>
       {items.length === 0 ? (
         <EmptyNote>Nenhum vencimento nos próximos 5 dias.</EmptyNote>

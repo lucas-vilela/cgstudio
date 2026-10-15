@@ -8,6 +8,7 @@ import { MembersTable } from "../members-table";
 import { Panel } from "../section";
 import { SummaryCards } from "../summary-cards";
 import { VencimentosProximos } from "../vencimentos-proximos";
+import { Dica } from "@/components/ajuda/dica";
 
 export function AlunosSecao({ visao }: { visao: Visao }) {
   const [busca, setBusca] = useState("");
@@ -30,7 +31,13 @@ export function AlunosSecao({ visao }: { visao: Visao }) {
       <Panel aria-labelledby="alunos-title">
         <div className="mb-4 flex flex-col gap-3">
           <div>
-            <h2 id="alunos-title" className="text-3xl">Todos os alunos</h2>
+            <div className="flex items-center gap-1">
+              <h2 id="alunos-title" className="text-3xl">Todos os alunos</h2>
+              <Dica titulo="Lista de alunos">
+                Toque no nome para abrir a ficha (anamnese, medidas, pagamentos). “Sem login” é quem ainda não entrou
+                no site com o Google; o coração indica atenção à saúde na anamnese.
+              </Dica>
+            </div>
             <p className="text-sm text-muted-foreground">
               {members.length} {members.length === 1 ? "aluno" : "alunos"}
               {q ? ` para “${busca.trim()}”` : ""}

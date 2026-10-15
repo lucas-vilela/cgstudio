@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { EmptyNote, Panel } from "../section";
 import { Tag } from "../tag";
 import { toast } from "sonner";
+import { Dica } from "@/components/ajuda/dica";
 
 type Acao = "aprovar" | "recusar" | "esconder" | "mostrar" | "excluir";
 
@@ -164,7 +165,13 @@ export function DepoimentosModeracao({ depoimentos }: { depoimentos: DepoimentoA
   return (
     <Panel aria-labelledby="dep-title" className="grid gap-6">
       <div>
-        <h2 id="dep-title" className="text-3xl">Depoimentos</h2>
+        <div className="flex items-center gap-1">
+          <h2 id="dep-title" className="text-3xl">Depoimentos</h2>
+          <Dica titulo="Esconder ou recusar?">
+            Esconder tira da home um depoimento já publicado, e dá para mostrar de novo. Recusar diz ao aluno que não foi
+            publicado, e ele pode reescrever. “Ajustar texto” corrige erros; o aluno é avisado.
+          </Dica>
+        </div>
         <p className="text-sm text-muted-foreground">
           Enviados pelos alunos no painel deles. Só os publicados aparecem na home. Se o aluno editar um
           depoimento publicado, ele sai da home e volta para a fila.

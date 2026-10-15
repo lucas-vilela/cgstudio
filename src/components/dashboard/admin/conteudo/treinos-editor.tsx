@@ -18,6 +18,7 @@ import { FieldSelect } from "../field-select";
 import { EmptyNote, Panel } from "../section";
 import { Tag } from "../tag";
 import { toast } from "sonner";
+import { Dica } from "@/components/ajuda/dica";
 
 function TreinoForm({ treino, onClose }: { treino: Treino | null; onClose: () => void }) {
   const [nome, setNome] = useState(treino?.nome ?? "");
@@ -175,7 +176,13 @@ export function TreinosEditor({ treinos }: { treinos: Treino[] }) {
     <Panel aria-labelledby="treinos-title">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 id="treinos-title" className="text-3xl">Tipos de treino</h2>
+          <div className="flex items-center gap-1">
+            <h2 id="treinos-title" className="text-3xl">Tipos de treino</h2>
+            <Dica titulo="Tipos de treino">
+              Use as setas para mudar a ordem na home. Desativar tira o treino do site, mas ele continua marcado nos
+              cadastros dos alunos.
+            </Dica>
+          </div>
           <p className="text-sm text-muted-foreground">
             Aparecem na home na ordem abaixo. Sempre fica pelo menos um treino ativo.
           </p>

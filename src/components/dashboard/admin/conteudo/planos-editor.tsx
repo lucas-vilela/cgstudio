@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { EmptyNote, Panel } from "../section";
 import { toast } from "sonner";
+import { Dica } from "@/components/ajuda/dica";
 
 const aulas = (n: number) => `${n} ${n === 1 ? "aula" : "aulas"} por semana`;
 
@@ -69,6 +70,9 @@ function usePlanoForm(plano: Plan | null) {
           <Switch id={`${prefixo}-home`} checked={exibir} onCheckedChange={setExibir}
             aria-label="Mostrar este plano na home" />
           <Label htmlFor={`${prefixo}-home`}>Mostrar na home</Label>
+          <Dica titulo="Plano na página inicial" className="-ml-2">
+            Desligado, o plano some da página inicial mas continua disponível para cadastrar e cobrar alunos.
+          </Dica>
         </div>
       </>
     );

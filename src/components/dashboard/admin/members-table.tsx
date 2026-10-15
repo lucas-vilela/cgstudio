@@ -27,6 +27,7 @@ import { RegisterPaymentButton } from "./register-payment-dialog";
 import { EmptyNote } from "./section";
 import { Tag } from "./tag";
 import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Dica } from "@/components/ajuda/dica";
 
 const NO_PLAN = "none";
 
@@ -197,7 +198,12 @@ export function MemberForm({
           ]} />
       </div>
       <div className="grid gap-1.5">
-        <Label htmlFor="ed-valor">Valor acordado (R$)</Label>
+        <div className="flex items-center gap-1">
+          <Label htmlFor="ed-valor">Valor acordado (R$)</Label>
+          <Dica titulo="Preço combinado" className="-my-2">
+            Preço combinado só com este aluno. Ele vale em vez do valor padrão do plano, e mudanças no plano não o afetam.
+          </Dica>
+        </div>
         <Input id="ed-valor" inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)}
           placeholder={padrao != null ? `Padrão do plano: ${moneyInput(padrao)}` : "Sem valor"}
           className="h-10 md:h-8" />
@@ -209,7 +215,13 @@ export function MemberForm({
         </p>
       ) : (
         <div className="grid gap-1.5">
-          <Label htmlFor="ed-status">Status</Label>
+          <div className="flex items-center gap-1">
+            <Label htmlFor="ed-status">Status</Label>
+            <Dica titulo="Pendente, ativo ou inativo" className="-my-2">
+              Pendente: ainda não matriculado (pode agendar aula grátis). Ativo: em dia. Inativo: venceu sem pagar; mantém
+              os horários mas não entra em novos. Registrar um pagamento já deixa o aluno ativo.
+            </Dica>
+          </div>
           <FieldSelect id="ed-status" value={status} onValueChange={setStatus} options={[...STATUSES]} />
         </div>
       )}

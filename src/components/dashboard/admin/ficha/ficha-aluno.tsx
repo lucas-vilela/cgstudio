@@ -20,6 +20,7 @@ import { AlertaSaude } from "./alerta";
 import { AnamneseForm } from "./anamnese-form";
 import { Medidas } from "./medidas";
 import { Resumo } from "./resumo";
+import { Dica } from "@/components/ajuda/dica";
 
 type Aba = "resumo" | "anamnese" | "medidas";
 const ABAS: Aba[] = ["resumo", "anamnese", "medidas"];
@@ -85,6 +86,10 @@ export function FichaAluno({ visao, memberId }: { visao: Visao; memberId: string
           {!anamnesePreenchida(anamnese) && (
             <Tag className="text-muted-foreground">Sem anamnese</Tag>
           )}
+          <Dica titulo="Ficha do aluno">
+            Resumo junta cuidados, plano, horários, medidas e pagamentos. Na Anamnese, respostas que pedem cuidado geram o
+            alerta de saúde. Em Medidas, registre cada avaliação para acompanhar a evolução. O telefone abre o WhatsApp.
+          </Dica>
         </div>
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
           {m.telefone && (
