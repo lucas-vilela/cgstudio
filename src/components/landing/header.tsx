@@ -17,12 +17,12 @@ export function Header() {
         </a>
         <nav aria-label="Principal" className="hidden gap-7 text-sm text-muted-foreground md:flex">
           {links.map(([l, h]) => (
-            <a key={h} href={h} className="rounded-md py-2 hover:text-foreground">
+            <a key={h} href={h} data-track="menu_click" data-track-secao={h.slice(1)} className="rounded-md py-2 hover:text-foreground">
               {l}
             </a>
           ))}
         </nav>
-        <GoogleCta className="h-11 px-4 text-sm sm:px-6" />
+        <GoogleCta local="header" className="h-11 px-4 text-sm sm:px-6" />
       </div>
     </header>
   );

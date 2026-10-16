@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Lobster_Two } from "next/font/google";
 import { GoogleAnalytics } from "@next/third-parties/google";
+import { RastreioCliques } from "@/components/analytics/rastreio-cliques";
 import { Toaster } from "@/components/ui/sonner";
 import { getSiteConfig } from "@/lib/cms";
 import "./globals.css";
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         {children}
+        <RastreioCliques />
         <Toaster position="top-center" richColors closeButton />
       </body>
       {gaId && <GoogleAnalytics gaId={gaId} />}

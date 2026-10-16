@@ -58,11 +58,11 @@ async function DashboardContent() {
               {status.label}
             </Badge>
           )}
-          <Link href="/dashboard/ajuda" className={buttonVariants({ variant: "ghost" })}>
+          <Link href="/dashboard/ajuda" data-track="ajuda_aberta" className={buttonVariants({ variant: "ghost" })}>
             <CircleHelp data-icon="inline-start" />
             Como usar
           </Link>
-          <SignOutButton />
+          <SignOutButton data-track="logout" />
         </div>
       </header>
       {member &&

@@ -7,11 +7,13 @@ import {
   dataCurta,
   diaDaSemana,
   hhmm,
+  nomeDia,
   type Acoes,
   type Experimental,
   type Financeiro,
   type SlotVaga,
 } from "@/app/dashboard/calendario-lib";
+import { track } from "@/lib/analytics";
 import { Halter } from "./calendario-halter";
 import { CalendarioExperimental } from "./calendario-experimental";
 import { CalendarioResumo } from "./calendario-resumo";
@@ -47,13 +49,19 @@ export function CalendarioAluno({ slots, financeiro, meusSlotIds, experimental, 
     semana.find((s) => s.dia_semana === dow && `${s.hora_inicio}|${s.hora_fim}` === h);
   const gratis = experimental && experimental.data > hoje ? experimental : null;
 
-  function executar(tipo: "entrar" | "sair", slotId: number) {
+  function executar(tipo: "entrar" | "sair", slot: SlotVaga) {
+    const slotId = slot.slot_id;
     setErro(null);
     setPendente({ slotId, tipo });
     startTransition(async () => {
       try {
         const r = await acoes[tipo](slotId);
         if (!r.ok) setErro(r.message);
+        else
+          track(tipo === "entrar" ? "aula_agendada" : "aula_cancelada", {
+            dia_semana: nomeDia(slot.dia_semana),
+            hora: hhmm(slot.hora_inicio),
+          });
       } catch {
         setErro("Sem conexão com o servidor. Tente novamente.");
       } finally {
@@ -74,8 +82,8 @@ export function CalendarioAluno({ slots, financeiro, meusSlotIds, experimental, 
         mostrarHora={mostrarHora}
         carregando={pendente?.slotId === slot.slot_id ? pendente.tipo : null}
         ocupado={isPending}
-        onEntrar={() => executar("entrar", slot.slot_id)}
-        onSair={() => executar("sair", slot.slot_id)}
+        onEntrar={() => executar("entrar", slot)}
+        onSair={() => executar("sair", slot)}
       />
     );
   }

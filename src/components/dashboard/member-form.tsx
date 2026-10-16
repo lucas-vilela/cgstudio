@@ -6,6 +6,7 @@ import { formatPhone, type Member } from "@/app/dashboard/members";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { track } from "@/lib/analytics";
 import { Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 
@@ -26,7 +27,9 @@ export function MemberForm({ member }: { member: Member | null }) {
 
   // Sucesso vira toast; erro geral continua junto do formulário.
   useEffect(() => {
-    if (state.ok && state.message) toast.success(state.message);
+    if (!state.ok) return;
+    track("dados_atualizados");
+    if (state.message) toast.success(state.message);
   }, [state]);
 
   if (!member)

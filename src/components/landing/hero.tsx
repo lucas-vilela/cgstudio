@@ -16,9 +16,10 @@ export async function Hero() {
         </h1>
         <p className="mt-5 mb-8 max-w-[44ch] text-lg text-muted-foreground">{c.hero_subtitulo}</p>
         <div className="flex flex-wrap gap-3">
-          <GoogleCta className="h-12 px-7" />
+          <GoogleCta local="hero" className="h-12 px-7" />
           <a
             href="#horarios"
+            data-track="ver_horarios_click"
             className="inline-flex h-12 items-center rounded-full border border-border px-7 text-[15px] font-semibold hover:border-foreground"
           >
             <Clock aria-hidden className="mr-2 size-4" />

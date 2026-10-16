@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { Loader2, Send } from "lucide-react";
 import { enviarDepoimento, type DepoimentoState } from "@/app/dashboard/depoimento-actions";
 import type { OwnDepoimento } from "@/app/dashboard/data";
@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { track } from "@/lib/analytics";
 import { toast } from "sonner";
 
 const initial: DepoimentoState = { ok: false };
@@ -28,9 +29,13 @@ export function DepoimentoForm({
   const [state, action, pending] = useActionState(enviarDepoimento, initial);
   const [texto, setTexto] = useState(depoimento?.texto ?? "");
   const ativo = status === "ativo";
+  // Guardado no envio: depois do sucesso a página revalida e `depoimento` já deixa de ser null.
+  const tipo = useRef<"novo" | "edicao">("novo");
 
   useEffect(() => {
-    if (state.ok && state.message) toast.success(state.message);
+    if (!state.ok) return;
+    track("depoimento_enviado", { tipo: tipo.current });
+    if (state.message) toast.success(state.message);
   }, [state]);
   const estado = depoimento ? ESTADO[depoimento.status] : null;
   const tamanho = texto.trim().length;
@@ -50,7 +55,12 @@ export function DepoimentoForm({
             : "Só alunos com matrícula ativa podem enviar ou editar depoimento. Fale com a recepção."}
         </CardDescription>
       </CardHeader>
-      <form action={action} noValidate className="flex flex-col gap-(--card-spacing)">
+      <form
+        action={action}
+        onSubmit={() => (tipo.current = depoimento ? "edicao" : "novo")}
+        noValidate
+        className="flex flex-col gap-(--card-spacing)"
+      >
         <CardContent className="flex flex-col gap-3">
           {/* Os textos de estado falam em editar: para quem não pode editar, só o selo basta. */}
           {estado && ativo && <p className="text-sm text-muted-foreground">{estado.texto}</p>}

@@ -6,6 +6,7 @@ import {
   dataComDia,
   dataCurta,
   faixa,
+  hhmm,
   nomeDia,
   proximasDatas,
   type Acoes,
@@ -13,6 +14,7 @@ import {
   type SlotVaga,
 } from "@/app/dashboard/calendario-lib";
 import { Button } from "@/components/ui/button";
+import { track } from "@/lib/analytics";
 import { Halter } from "./calendario-halter";
 
 type Props = { slots: SlotVaga[]; experimental: Experimental | null; hoje: string; acoes: Acoes };
@@ -95,7 +97,9 @@ export function CalendarioExperimental({ slots, experimental, hoje, acoes }: Pro
               variant="outline"
               className="h-11 w-full sm:w-fit"
               disabled={isPending}
-              onClick={() => executar(() => acoes.cancelarExperimental(experimental.id))}
+              onClick={() =>
+                executar(() => acoes.cancelarExperimental(experimental.id), () => track("experimental_cancelada"))
+              }
             >
               {isPending ? (
                 <>
@@ -205,7 +209,15 @@ export function CalendarioExperimental({ slots, experimental, hoje, acoes }: Pro
           className="h-11 sm:px-6"
           disabled={!podeConfirmar}
           onClick={() =>
-            slotId && data && executar(() => acoes.agendarExperimental(slotId, data), () => setAberto(false))
+            slot &&
+            data &&
+            executar(
+              () => acoes.agendarExperimental(slot.slot_id, data),
+              () => {
+                track("experimental_agendada", { dia_semana: nomeDia(slot.dia_semana), hora: hhmm(slot.hora_inicio) });
+                setAberto(false);
+              },
+            )
           }
         >
           {isPending ? (

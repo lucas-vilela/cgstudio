@@ -18,6 +18,7 @@ export async function Footer() {
         <div className="grid gap-4 sm:grid-cols-2">
           <a
             href={`https://wa.me/${c.whatsapp}`}
+            data-track="whatsapp_click"
             className="block rounded-[20px] border border-border bg-surface p-6 hover:border-accent"
           >
             <MessageCircle aria-hidden className="mb-3 size-6 text-accent" />
@@ -26,6 +27,7 @@ export async function Footer() {
           </a>
           <a
             href={`https://instagram.com/${c.instagram}`}
+            data-track="instagram_click"
             className="block rounded-[20px] border border-border bg-surface p-6 hover:border-accent"
           >
             <AtSign aria-hidden className="mb-3 size-6 text-accent" />
@@ -33,7 +35,7 @@ export async function Footer() {
             <span className="mt-1 block text-muted-foreground">Instagram</span>
           </a>
         </div>
-        <div className="mt-10"><GoogleCta className="h-12 px-7" /></div>
+        <div className="mt-10"><GoogleCta local="footer" className="h-12 px-7" /></div>
         <p className="mt-12 text-sm text-muted-foreground">© CG Studio</p>
       </div>
     </footer>

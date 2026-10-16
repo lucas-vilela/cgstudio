@@ -5,6 +5,7 @@ import { Plans } from "@/components/landing/plans";
 import { Schedule } from "@/components/landing/schedule";
 import { Depoimentos } from "@/components/landing/depoimentos";
 import { Footer } from "@/components/landing/footer";
+import { SecoesVistas } from "@/components/analytics/secoes-vistas";
 
 export default function Home() {
   return (
@@ -18,6 +19,7 @@ export default function Home() {
         <Schedule />
       </main>
       <Footer />
+      <SecoesVistas />
     </div>
   );
 }
