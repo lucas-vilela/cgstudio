@@ -1,6 +1,7 @@
-import { AtSign, MessageCircle } from "lucide-react";
+import { AtSign, MapPin, MessageCircle } from "lucide-react";
 import { formatPhone } from "@/app/dashboard/members";
 import { getSiteConfig } from "@/lib/cms";
+import { ENDERECO, MAPA_URL } from "@/lib/site";
 import { GoogleCta } from "./google-cta";
 import { SectionTitle } from "./section-title";
 
@@ -35,6 +36,15 @@ export async function Footer() {
             <span className="mt-1 block text-muted-foreground">Instagram</span>
           </a>
         </div>
+        <address className="mt-6 flex items-start gap-2 not-italic text-muted-foreground">
+          <MapPin aria-hidden className="mt-0.5 size-5 shrink-0 text-accent" />
+          <span>
+            {ENDERECO.logradouro} · {ENDERECO.bairro}, {ENDERECO.cidade} – {ENDERECO.uf}, {ENDERECO.cep} ·{" "}
+            <a href={MAPA_URL} data-track="mapa_click" className="text-foreground underline underline-offset-4 hover:text-accent">
+              Ver no mapa
+            </a>
+          </span>
+        </address>
         <div className="mt-10"><GoogleCta local="footer" className="h-12 px-7" /></div>
         <p className="mt-12 text-sm text-muted-foreground">© CG Studio</p>
       </div>

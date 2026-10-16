@@ -4,6 +4,7 @@ import { GoogleAnalytics } from "@next/third-parties/google";
 import { RastreioCliques } from "@/components/analytics/rastreio-cliques";
 import { Toaster } from "@/components/ui/sonner";
 import { getSiteConfig } from "@/lib/cms";
+import { ENDERECO, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const inter = Inter({
@@ -20,9 +21,12 @@ const lobster = Lobster_Two({
 
 export async function generateMetadata(): Promise<Metadata> {
   const { meta_descricao } = await getSiteConfig();
+  const title = `CG Studio · Treino funcional no ${ENDERECO.bairro}, ${ENDERECO.cidade}`;
   return {
-    title: "CG Studio",
+    metadataBase: new URL(SITE_URL),
+    title,
     description: meta_descricao,
+    openGraph: { type: "website", locale: "pt_BR", siteName: "CG Studio", url: "/", title, description: meta_descricao },
     // Verificação de propriedade do Google Search Console (método "Tag HTML").
     verification: { google: "1Lu6tj3rYkaAQKaOr7YkMsnUPrSNNRS0kzrb0iaZi18" },
   };
