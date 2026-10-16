@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Lobster_Two } from "next/font/google";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import { Toaster } from "@/components/ui/sonner";
 import { getSiteConfig } from "@/lib/cms";
 import "./globals.css";
@@ -21,6 +22,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: "CG Studio", description: meta_descricao };
 }
 
+// Só carrega em produção, para não poluir as métricas com acessos locais.
+const gaId =
+  process.env.NODE_ENV === "production" ? process.env.NEXT_PUBLIC_GA_ID : undefined;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
@@ -32,6 +37,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {children}
         <Toaster position="top-center" richColors closeButton />
       </body>
+      {gaId && <GoogleAnalytics gaId={gaId} />}
     </html>
   );
 }
