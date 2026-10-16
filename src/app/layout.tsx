@@ -20,7 +20,12 @@ const lobster = Lobster_Two({
 
 export async function generateMetadata(): Promise<Metadata> {
   const { meta_descricao } = await getSiteConfig();
-  return { title: "CG Studio", description: meta_descricao };
+  return {
+    title: "CG Studio",
+    description: meta_descricao,
+    // Verificação de propriedade do Google Search Console (método "Tag HTML").
+    verification: { google: "1Lu6tj3rYkaAQKaOr7YkMsnUPrSNNRS0kzrb0iaZi18" },
+  };
 }
 
 // Só carrega em produção, para não poluir as métricas com acessos locais.
