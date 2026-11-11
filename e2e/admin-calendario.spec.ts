@@ -172,6 +172,56 @@ test.describe("cadastro de horários (precisa de conexão)", () => {
     expect((await slotNoBanco(s.id))!.ativo).toBe(true);
   });
 
+  test("exclui horário vazio só depois do Sim; com aluno, só oferece desativar", async ({ page, fabrica }) => {
+    const vazio = await fabrica.slot();
+    const cheio = await fabrica.slot();
+    const aluno = await fabrica.aluno({ login: false, status: "ativo", plano: "1x", vencimentoEm: 9 });
+    await fabrica.alocar(cheio.id, aluno.id);
+    await abrirAdmin(page, "/dashboard/admin/calendario");
+    const dialogo = page.getByRole("dialog");
+
+    await cartao(page, vazio).getByRole("button", { name: /^Excluir horário/ }).click();
+    await expect(dialogo.getByRole("heading", { name: "Excluir horário?" })).toBeVisible();
+    await dialogo.getByRole("button", { name: "Não" }).click();
+    await expect(dialogo).toHaveCount(0);
+    expect(await slotNoBanco(vazio.id)).not.toBeNull();
+
+    await cartao(page, vazio).getByRole("button", { name: /^Excluir horário/ }).click();
+    const excluir = esperarServerAction(page);
+    await dialogo.getByRole("button", { name: "Sim, excluir" }).click();
+    await excluir;
+    await expect(toast(page, "Horário excluído.")).toBeVisible();
+    expect(await slotNoBanco(vazio.id)).toBeNull();
+    await expect(cartao(page, vazio)).toHaveCount(0);
+
+    await cartao(page, cheio).getByRole("button", { name: /^Excluir horário/ }).click();
+    await expect(dialogo.getByRole("heading", { name: "Não dá para excluir" })).toBeVisible();
+    await expect(dialogo).toContainText("Este horário tem 1 aluno. Para tirá-lo da agenda, desative em vez de excluir.");
+    await expect(dialogo.getByRole("button", { name: "Sim, excluir" })).toHaveCount(0);
+    const desativar = esperarServerAction(page);
+    await dialogo.getByRole("button", { name: "Desativar horário" }).click();
+    await desativar;
+    await expect(toast(page, "Horário desativado.")).toBeVisible();
+    expect(await slotNoBanco(cheio.id)).toMatchObject({ ativo: false });
+    expect(await alunosDoSlot(cheio.id)).toEqual([aluno.id]);
+  });
+
+  test("aula experimental que a tela não mostra: o banco barra e a tela troca para o aviso", async ({ page, fabrica }) => {
+    const s = await fabrica.slot();
+    const pendente = await fabrica.aluno({ login: false, status: "pendente" });
+    ok(await db.from("trial_bookings").insert({ member_id: pendente.id, slot_id: s.id, data: "2026-01-01" }), "trial");
+    await abrirAdmin(page, "/dashboard/admin/calendario");
+    const dialogo = page.getByRole("dialog");
+
+    await cartao(page, s).getByRole("button", { name: /^Excluir horário/ }).click();
+    const excluir = esperarServerAction(page);
+    await dialogo.getByRole("button", { name: "Sim, excluir" }).click();
+    await excluir;
+    await expect(dialogo.getByRole("heading", { name: "Não dá para excluir" })).toBeVisible();
+    await expect(dialogo).toContainText("Este horário tem aula experimental registrada. Desative-o em vez de excluir.");
+    expect(await slotNoBanco(s.id)).not.toBeNull();
+  });
+
   test("horário desativado some da agenda do aluno", async ({ page, fabrica, outraJanela }) => {
     const s = await fabrica.slot({ capacidade: 3 });
     const aluno = await fabrica.aluno({ status: "ativo", plano: "2x", vencimentoEm: 9 });

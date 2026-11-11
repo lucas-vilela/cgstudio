@@ -150,15 +150,31 @@ export class Fabrica {
 
   async limpar() {
     if (this.slots.length) await db.from("slots").delete().in("id", this.slots);
-    if (this.membros.length) await db.from("members").delete().in("id", this.membros);
-    // Apagar o usuário apaga o member (on delete cascade) e, com ele, pagamentos, horários etc.
+    // payments.member_id é "on delete restrict" (migration 0015): pagamentos saem antes do aluno.
+    if (this.usuarios.length) {
+      const { data } = await db.from("members").select("id").in("auth_user_id", this.usuarios);
+      await apagarPagamentos((data ?? []).map((m) => m.id));
+    }
+    if (this.membros.length) {
+      await apagarPagamentos(this.membros);
+      await db.from("members").delete().in("id", this.membros);
+    }
+    // Apagar o usuário apaga o member (on delete cascade) e, com ele, horários, ficha etc.
     for (const u of this.usuarios) await db.auth.admin.deleteUser(u);
   }
+}
+
+async function apagarPagamentos(memberIds: string[]) {
+  if (memberIds.length) await db.from("payments").delete().in("member_id", memberIds);
 }
 
 /** Apaga o que sobrou de execuções interrompidas. */
 export async function limparRestos() {
   await db.from("slots").delete().lt("hora_inicio", "06:00");
+  // Inclui alunos de contas e2e (com login): o pagamento bloquearia o deleteUser abaixo.
+  const { data: restos } = await db.from("members").select("id")
+    .or("email.ilike.e2e-%,nome.ilike.e2e%");
+  await apagarPagamentos((restos ?? []).map((m) => m.id));
   await db.from("members").delete().or("email.ilike.e2e-%,nome.ilike.e2e%");
   await db.from("plans").delete().ilike("nome", "E2E%");
   await db.from("treinos").delete().ilike("nome", "E2E%");

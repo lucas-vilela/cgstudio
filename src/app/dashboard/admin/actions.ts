@@ -66,6 +66,27 @@ export async function setSlotAtivo(slotId: number, ativo: boolean): Promise<Resu
   return { ok: true, data: undefined };
 }
 
+// Só horário vazio (sem aluno fixo nem aula experimental); a RPC confere de novo no banco.
+// `bloqueado`: o banco achou gente no horário (ex.: aula experimental que a tela não mostra);
+// a tela troca a confirmação pelo aviso de desativar.
+export async function excluirHorario(
+  slotId: number,
+): Promise<Result | { ok: false; message: string; bloqueado: true }> {
+  const a = await admin();
+  if ("error" in a) return fail(a.error);
+  if (!Number.isInteger(slotId)) return fail("Horário inválido.");
+  const { error } = await a.supabase.rpc("excluir_horario", { p_slot_id: slotId });
+  if (error) {
+    const message = friendlyError(error, "Não foi possível excluir o horário.");
+    if (/horario_com_(alunos|aula_experimental)/.test(error.message ?? ""))
+      return { ok: false, message, bloqueado: true };
+    return fail(message);
+  }
+  refresh();
+  refreshHome();
+  return { ok: true, data: undefined };
+}
+
 export async function setUserRole(userId: string, role: "admin" | "member"): Promise<Result> {
   const a = await admin();
   if ("error" in a) return fail(a.error);

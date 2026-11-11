@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { saveSlot, setSlotAtivo } from "@/app/dashboard/admin/actions";
+import { excluirHorario, saveSlot, setSlotAtivo } from "@/app/dashboard/admin/actions";
 import { formatPhone } from "@/app/dashboard/members";
 import { atualizar, enfileirar } from "@/lib/offline/store";
 import { msgGuardado, useAdminEstado } from "@/lib/offline/use-admin";
@@ -20,7 +20,7 @@ import { FieldSelect } from "./field-select";
 import { LinkAluno } from "./link-aluno";
 import { EmptyNote } from "./section";
 import { Tag } from "./tag";
-import { Pencil, Plus, Power, PowerOff, Search, UserMinus, UserPlus, Users } from "lucide-react";
+import { Pencil, Plus, Power, PowerOff, Search, Trash2, UserMinus, UserPlus, Users } from "lucide-react";
 import { Dica } from "@/components/ajuda/dica";
 
 const DAY_OPTIONS = DIAS.map((label, i) => ({ value: String(i), label }));
@@ -200,7 +200,80 @@ function SlotAlunos({
   );
 }
 
-function SlotCard({ slot, onEdit, onAlunos }: { slot: SlotVisao; onEdit: () => void; onAlunos: () => void }) {
+// Horário com gente não se exclui (decisão do dono): o aviso oferece desativar. Vazio: confirma Sim/Não.
+function ExcluirHorario({ slot, onClose }: { slot: SlotVisao; onClose: () => void }) {
+  const qtd = slot.alunos.length;
+  const [aviso, setAviso] = useState(
+    qtd > 0 ? `Este horário tem ${qtd === 1 ? "1 aluno" : `${qtd} alunos`}. Para tirá-lo da agenda, desative em vez de excluir.` : "",
+  );
+  const [error, setError] = useState("");
+  const [pending, start] = useTransition();
+  const nome = `${DIAS[slot.dia_semana]} · ${hhmm(slot.hora_inicio)}–${hhmm(slot.hora_fim)}`;
+
+  function excluir() {
+    setError("");
+    if (!navigator.onLine) return setError("Excluir horário precisa de conexão.");
+    start(async () => {
+      const res = await excluirHorario(slot.slot_id);
+      if (!res.ok) return "bloqueado" in res ? setAviso(res.message) : setError(res.message);
+      toast.success("Horário excluído.");
+      await atualizar();
+      onClose();
+    });
+  }
+
+  function desativar() {
+    setError("");
+    if (!navigator.onLine) return setError("Desativar horário precisa de conexão.");
+    start(async () => {
+      const res = await setSlotAtivo(slot.slot_id, false);
+      if (!res.ok) return setError(res.message);
+      toast.success("Horário desativado.");
+      await atualizar();
+      onClose();
+    });
+  }
+
+  if (aviso)
+    return (
+      <>
+        <DialogHeader>
+          <DialogTitle className="font-display text-2xl">Não dá para excluir</DialogTitle>
+          <DialogDescription>{nome}</DialogDescription>
+        </DialogHeader>
+        <p className="text-sm">{aviso}</p>
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose} className="min-h-11 md:min-h-8">Fechar</Button>
+          {slot.ativo && (
+            <Button type="button" disabled={pending} onClick={desativar} className="min-h-11 md:min-h-8">
+              <PowerOff data-icon="inline-start" />{pending ? "Desativando…" : "Desativar horário"}
+            </Button>
+          )}
+        </DialogFooter>
+      </>
+    );
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle className="font-display text-2xl">Excluir horário?</DialogTitle>
+        <DialogDescription>{nome}. O horário é apagado de vez; não tem volta.</DialogDescription>
+      </DialogHeader>
+      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onClose} className="min-h-11 md:min-h-8">Não</Button>
+        <Button type="button" variant="destructive" disabled={pending} onClick={excluir} className="min-h-11 md:min-h-8">
+          {pending ? "Excluindo…" : "Sim, excluir"}
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
+
+function SlotCard({
+  slot, onEdit, onAlunos, onExcluir,
+}: { slot: SlotVisao; onEdit: () => void; onAlunos: () => void; onExcluir: () => void }) {
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
   const lotado = slot.vagas === 0;
@@ -236,6 +309,10 @@ function SlotCard({ slot, onEdit, onAlunos }: { slot: SlotVisao; onEdit: () => v
           {slot.ativo ? <PowerOff data-icon="inline-start" /> : <Power data-icon="inline-start" />}
           {slot.ativo ? "Desativar" : "Ativar"}
         </Button>
+        <Button size="sm" variant="ghost" onClick={onExcluir} className="min-h-11 text-destructive md:min-h-7"
+          aria-label={`Excluir horário ${hhmm(slot.hora_inicio)}–${hhmm(slot.hora_fim)}`}>
+          <Trash2 data-icon="inline-start" />Excluir
+        </Button>
       </div>
       {error && <p role="alert" className="mt-2 text-sm text-destructive">{error}</p>}
     </li>
@@ -250,6 +327,8 @@ export function SlotsBoard({
   const [alunosId, setAlunosId] = useState<number | null>(null);
   const formSlot = form?.id != null ? (slots.find((s) => s.slot_id === form.id) ?? null) : null;
   const alunosSlot = alunosId != null ? slots.find((s) => s.slot_id === alunosId) : undefined;
+  const [excluirId, setExcluirId] = useState<number | null>(null);
+  const excluirSlot = excluirId != null ? slots.find((s) => s.slot_id === excluirId) : undefined;
 
   // Todos os dias, inclusive sábado e domingo: deixa claro que dá para ter horário em qualquer dia.
   const days = WEEK_ORDER;
@@ -272,7 +351,7 @@ export function SlotsBoard({
               <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {list.map((s) => (
                   <SlotCard key={s.slot_id} slot={s} onEdit={() => setForm({ id: s.slot_id })}
-                    onAlunos={() => setAlunosId(s.slot_id)} />
+                    onAlunos={() => setAlunosId(s.slot_id)} onExcluir={() => setExcluirId(s.slot_id)} />
                 ))}
               </ul>
             )}
@@ -288,6 +367,11 @@ export function SlotsBoard({
       <Dialog open={!!alunosSlot} onOpenChange={(o) => !o && setAlunosId(null)}>
         <DialogContent>
           {alunosSlot && <SlotAlunos slot={alunosSlot} members={members} anamneses={anamneses} onClose={() => setAlunosId(null)} />}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!excluirSlot} onOpenChange={(o) => !o && setExcluirId(null)}>
+        <DialogContent>
+          {excluirSlot && <ExcluirHorario key={excluirSlot.slot_id} slot={excluirSlot} onClose={() => setExcluirId(null)} />}
         </DialogContent>
       </Dialog>
     </div>

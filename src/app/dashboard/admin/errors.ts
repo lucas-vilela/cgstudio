@@ -26,6 +26,9 @@ const MESSAGES: Record<string, string> = {
   member_avaliacoes_member_id_fkey: "Aluno não encontrado (o cadastro pode ter sido excluído).",
   member_avaliacoes_alguma_medida: "Informe pelo menos uma medida.",
   data_no_futuro: "A data não pode ser no futuro.",
+  horario_nao_encontrado: "Horário não encontrado (pode já ter sido excluído).",
+  horario_com_alunos: "Este horário tem alunos. Desative-o em vez de excluir.",
+  horario_com_aula_experimental: "Este horário tem aula experimental registrada. Desative-o em vez de excluir.",
 };
 
 export function friendlyError(

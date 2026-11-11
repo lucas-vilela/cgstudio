@@ -268,4 +268,34 @@ test.describe("regras das funções do banco (RPC)", () => {
     expect((await adm.rpc("excluir_aluno_sem_login", { p_member_id: aluno.id })).error?.message).toBe("aluno_com_login");
     expect((await sbAluno.rpc("set_user_role", { p_user_id: aluno.userId, p_role: "admin" })).error?.message).toBe("nao_admin");
   });
+
+  test("excluir aluno e horário só pelas RPCs; pagamento segura a exclusão do aluno", async ({ fabrica }) => {
+    const adm = await comoAdmin();
+    const aluno = await fabrica.aluno({ login: false, status: "ativo" });
+    await fabrica.pagamento(aluno.id, 50);
+
+    // Sem DELETE direto pela Data API (migrations 0015/0016), nem para admin.
+    expect((await adm.from("members").delete().eq("id", aluno.id)).error?.message).toMatch(/permission denied/);
+    expect((await adm.rpc("excluir_aluno_sem_login", { p_member_id: aluno.id })).error?.message).toBe("aluno_com_pagamentos");
+    // on delete restrict: nem o service role apaga aluno com pagamento.
+    expect((await db.from("members").delete().eq("id", aluno.id)).error?.message).toContain("payments_member_id_fkey");
+    expect(await memberPorId(aluno.id)).not.toBeNull();
+
+    const comAluno = await fabrica.slot();
+    await fabrica.alocar(comAluno.id, aluno.id);
+    const comExperimental = await fabrica.slot();
+    const pendente = await fabrica.aluno({ login: false, status: "pendente" });
+    ok(await db.from("trial_bookings").insert({ member_id: pendente.id, slot_id: comExperimental.id, data: addDias(hojeSP(), -7) }), "trial");
+    const vazio = await fabrica.slot();
+
+    expect((await adm.from("slots").delete().eq("id", vazio.id)).error?.message).toMatch(/permission denied/);
+    expect((await (await clienteComo(USUARIOS.ana)).rpc("excluir_horario", { p_slot_id: vazio.id })).error?.message)
+      .toBe("nao_admin");
+    expect((await adm.rpc("excluir_horario", { p_slot_id: comAluno.id })).error?.message).toBe("horario_com_alunos");
+    expect((await adm.rpc("excluir_horario", { p_slot_id: comExperimental.id })).error?.message).toBe("horario_com_aula_experimental");
+    expect((await adm.rpc("excluir_horario", { p_slot_id: vazio.id })).error).toBeNull();
+    expect(ok(await db.from("slots").select("id").in("id", [vazio.id, comAluno.id, comExperimental.id])))
+      .toHaveLength(2);
+    expect((await adm.rpc("excluir_horario", { p_slot_id: vazio.id })).error?.message).toBe("horario_nao_encontrado");
+  });
 });

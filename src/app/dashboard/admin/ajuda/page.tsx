@@ -197,7 +197,7 @@ const SECOES: Secao[] = [
           "Escolha o dia da semana (inclusive sábado e domingo), início, fim e capacidade.",
           "Salve. O horário aparece para os alunos na agenda deles.",
         ],
-        texto: "“Desativar” tira o horário da agenda dos alunos sem apagar nada. Ativar e desativar precisam de conexão.",
+        texto: "“Desativar” tira o horário da agenda dos alunos sem apagar nada. “Excluir” apaga de vez, mas só funciona com o horário vazio (sem alunos e sem aula experimental registrada); se tiver alguém, desative. Ativar, desativar e excluir precisam de conexão.",
       },
       {
         titulo: "Alunos da turma",
