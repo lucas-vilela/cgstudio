@@ -67,6 +67,34 @@ test.describe("GET /api/admin/snapshot", () => {
       restricao_medica: true, updated_by_nome: null,
     });
   });
+
+  test("admin não é aluno: fora da lista, do resumo, dos vencimentos e dos inadimplentes", async ({ fabrica }) => {
+    // Admins com cara de aluno: ativo em atraso e ativo vencendo em 2 dias.
+    const atrasado = await fabrica.aluno({ admin: true, status: "ativo", plano: "1x", vencimentoEm: -3 });
+    const vencendo = await fabrica.aluno({ admin: true, status: "ativo", plano: "1x", vencimentoEm: 2 });
+    const aluno = await fabrica.aluno({ status: "ativo", plano: "1x", vencimentoEm: 2 });
+    const ids = [atrasado.id, vencendo.id];
+
+    const s = await (await api.admin.get("/api/admin/snapshot")).json();
+    const doSnap = (k: string) => (s[k] as { member_id: string }[]).map((m) => m.member_id);
+    for (const k of ["members", "vencimentos", "inadimplentes"])
+      expect(doSnap(k).filter((id) => ids.includes(id)), k).toEqual([]);
+    expect(doSnap("members")).toContain(aluno.id);
+    expect(doSnap("vencimentos")).toContain(aluno.id);
+    expect(s.members[0]).not.toHaveProperty("eh_admin");
+
+    // Resumo: "ativos" conta só quem não é admin.
+    const adm = await comoAdmin();
+    const contar = async (ehAdmin: boolean) => (await adm.from("member_financeiro")
+      .select("member_id", { count: "exact", head: true }).eq("status", "ativo").eq("eh_admin", ehAdmin)).count;
+    expect(await contar(true)).toBeGreaterThanOrEqual(2);
+    const ativos = await contar(false);
+    expect(Math.abs(s.resumo.ativos - ativos!)).toBeLessThanOrEqual(3); // outros testes em paralelo
+
+    // O painel do aluno continua lendo só a própria linha.
+    const propria = ok(await (await clienteComo(aluno.email)).from("member_financeiro").select("member_id,eh_admin"));
+    expect(propria).toEqual([{ member_id: aluno.id, eh_admin: false }]);
+  });
 });
 
 test.describe("POST /api/admin/acoes", () => {

@@ -38,7 +38,9 @@ export async function getResumo() {
   const supabase = await createClient();
   const mes = `${todayISO().slice(0, 7)}-01`;
   const [ativos, mensal, atraso] = await Promise.all([
-    supabase.from("members").select("id", { count: "exact", head: true }).eq("status", "ativo"),
+    // Admin também tem linha em members, mas não é aluno (migration 0017).
+    supabase.from("member_financeiro").select("member_id", { count: "exact", head: true })
+      .eq("status", "ativo").eq("eh_admin", false),
     supabase.from("financeiro_mensal").select("total_recebido").eq("mes", mes).maybeSingle(),
     supabase.from("inadimplentes").select("member_id", { count: "exact", head: true }),
   ]);
@@ -82,11 +84,14 @@ async function todasAsPaginas<T>(
 }
 
 // Todos os alunos com situação financeira, treinos e se têm login (snapshot do app do admin).
+// Admins ficam de fora: têm linha em members (1º login), mas não são alunos.
 export async function getAdminMembers(): Promise<AdminMember[]> {
   const supabase = await createClient();
-  const [rows, extras, ligacoes] = await Promise.all([
-    todasAsPaginas<AdminMember>(
-      (de, ate) => supabase.from("member_financeiro").select("*").order("nome").order("member_id").range(de, ate),
+  const [linhas, extras, ligacoes] = await Promise.all([
+    todasAsPaginas<AdminMember & { eh_admin?: boolean }>(
+      (de, ate) =>
+        supabase.from("member_financeiro").select("*").eq("eh_admin", false)
+          .order("nome").order("member_id").range(de, ate),
       "member_financeiro",
     ),
     todasAsPaginas<{ id: string; valor_acordado: number | null; auth_user_id: string | null; created_at: string }>(
@@ -106,7 +111,11 @@ export async function getAdminMembers(): Promise<AdminMember[]> {
   const desde = new Map(extras.map((m) => [m.id, m.created_at]));
   const treinos = new Map<string, number[]>();
   for (const l of ligacoes) treinos.set(l.member_id, [...(treinos.get(l.member_id) ?? []), l.treino_id]);
-  return rows.map((r) => ({
+  return linhas.map((linha) => {
+    const r = { ...linha };
+    delete r.eh_admin;
+    return r;
+  }).map((r) => ({
     ...r,
     valor: r.valor == null ? null : num(r.valor),
     valor_acordado: acordado.get(r.member_id) ?? null,
