@@ -1,5 +1,6 @@
 import { cacheLife, cacheTag } from "next/cache";
 import { createPublicClient } from "@/lib/supabase";
+import { tipoDePlano, type PlanoTipo } from "@/lib/planos";
 
 // Tags de cache da leitura pública da home. As ações do admin chamam `updateTag` com elas.
 export const CMS_TAGS = {
@@ -14,6 +15,7 @@ export type PlanoHome = {
   vezes_semana: number;
   valor_padrao: number;
   descricao: string | null;
+  tipo: PlanoTipo;
 };
 export type TreinoHome = { nome: string; descricao: string; icone: string };
 export type DepoimentoHome = { id: number; texto: string; nome_exibicao: string };
@@ -71,11 +73,16 @@ async function buscarPlanos(): Promise<PlanoHome[]> {
   cacheTag(CMS_TAGS.planos);
   const { data, error } = await createPublicClient()
     .from("plans")
-    .select("nome, vezes_semana, valor_padrao, descricao")
+    .select("nome, vezes_semana, valor_padrao, descricao, tipo")
     .eq("exibir_na_home", true)
-    .order("vezes_semana");
+    .order("ordem")
+    .order("nome");
   if (error) throw new Error(error.message);
-  return data.map((p) => ({ ...p, valor_padrao: Number(p.valor_padrao) }));
+  return data.map((p) => ({
+    ...p,
+    valor_padrao: Number(p.valor_padrao),
+    tipo: tipoDePlano(p.tipo),
+  }));
 }
 
 async function buscarTreinos(): Promise<TreinoHome[]> {

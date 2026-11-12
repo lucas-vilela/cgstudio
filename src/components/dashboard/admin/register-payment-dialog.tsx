@@ -87,7 +87,7 @@ function PaymentForm({
         <div className="flex items-center gap-1">
           <Label htmlFor="pg-data">Data do pagamento</Label>
           <Dica titulo="Como o vencimento avança" className="-my-2">
-            Soma 1 mês: ao vencimento atual se o aluno pagou antes de vencer, ou à data do pagamento se já tinha vencido.
+            Soma 1 mês (3 no plano trimestral): ao vencimento atual se o aluno pagou antes de vencer, ou à data do pagamento se já tinha vencido.
             31/01 vira 28/02.
           </Dica>
         </div>

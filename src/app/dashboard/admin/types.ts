@@ -1,4 +1,9 @@
 // Formatos das tabelas/views da migration 0003 usadas pelas telas de admin.
+// 'trimestral' = cobrado a cada 3 meses (valor do trimestre; o pagamento soma 3 meses ao vencimento).
+// 'avulsa' = aula avulsa: só aparece na home (preço por aula), nunca é plano de aluno.
+export type { PlanoTipo } from "@/lib/planos";
+import type { PlanoTipo } from "@/lib/planos";
+
 export type Plan = {
   id: number;
   nome: string;
@@ -6,6 +11,8 @@ export type Plan = {
   valor_padrao: number;
   descricao: string | null;
   exibir_na_home: boolean;
+  tipo: PlanoTipo;
+  ordem: number;
 };
 
 export type Situacao = "sem_vencimento" | "em_atraso" | "vence_em_breve" | "em_dia";

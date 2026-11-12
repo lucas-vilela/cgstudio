@@ -194,7 +194,12 @@ export function MemberForm({
         <FieldSelect id="ed-plano" value={planId} onValueChange={setPlanId}
           options={[
             { value: NO_PLAN, label: "Sem plano" },
-            ...plans.map((p) => ({ value: String(p.id), label: `${p.nome} · ${brl(p.valor_padrao)}` })),
+            ...plans
+              .filter((p) => p.tipo !== "avulsa")
+              .map((p) => ({
+                value: String(p.id),
+                label: `${p.nome} · ${brl(p.valor_padrao)}${p.tipo === "trimestral" ? " por trimestre" : ""}`,
+              })),
           ]} />
       </div>
       <div className="grid gap-1.5">

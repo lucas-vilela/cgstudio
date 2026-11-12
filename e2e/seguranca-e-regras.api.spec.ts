@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { request as pwRequest, type APIRequestContext } from "@playwright/test";
 import { test, expect, USUARIOS, storageStatePath } from "./support/test";
 import { addDias, addMes, hojeSP, proximasDatas } from "./support/datas";
-import { anon, clienteComo, comoAdmin, db, memberPorEmail, memberPorId, ok } from "./support/db";
+import { anon, clienteComo, comoAdmin, db, memberPorEmail, memberPorId, ok, planoId } from "./support/db";
 import type { Usuario } from "./supabase-local";
 
 // Sem navegador: rotas /api/admin/* (status, corpo, cabeçalhos), idempotência da fila, RLS e as
@@ -20,6 +20,20 @@ test.afterAll(async () => {
 
 const enviar = (quem: Usuario | "anon", corpo: unknown) =>
   api[quem].post("/api/admin/acoes", { data: corpo as object });
+
+// Plano só deste arquivo, fora da home (não mexe na seção Planos que o projeto `serial` confere).
+// Prefixo "E2E api": o afterAll do `serial` não apaga; o limparRestos do setup apaga.
+async function planoDeTeste(tipo: "mensal" | "trimestral" | "avulsa", valor: number) {
+  const nome = `E2E api ${tipo} ${randomUUID().slice(0, 6)}` as const;
+  ok(await db.from("plans").insert({ nome, tipo, vezes_semana: 2, valor_padrao: valor, exibir_na_home: false, ordem: 999 }), "insert plano");
+  planosCriados.push(nome);
+  return nome;
+}
+const planosCriados: string[] = [];
+test.afterAll(async () => {
+  // Depois da limpeza da fábrica (alunos), que roda ao fim de cada teste.
+  if (planosCriados.length) await db.from("plans").delete().in("nome", planosCriados);
+});
 
 test.describe("GET /api/admin/snapshot", () => {
   test("sem sessão → 401; aluno → 403; ambos sem cache", async () => {
@@ -142,6 +156,41 @@ test.describe("POST /api/admin/acoes", () => {
     expect((await memberPorId(aluno.id))!.vencimento).toBe(addMes(addMes(venc)));
   });
 
+  test("plano trimestral: pagamento usa o valor do trimestre e soma 3 meses ao vencimento", async ({ fabrica }) => {
+    const nome = await planoDeTeste("trimestral", 300);
+    const aluno = await fabrica.aluno({ login: false, status: "ativo", plano: nome, vencimentoEm: 5 });
+    const venc = (await memberPorId(aluno.id))!.vencimento as string;
+    const item = { id: randomUUID(), tipo: "pagamento", payload: { member_id: aluno.id, forma: "pix", valor: null, pago_em: hojeSP(), observacao: null } };
+    expect(await (await enviar("admin", item)).json()).toEqual({ ok: true });
+    expect(ok(await db.from("payments").select("valor").eq("member_id", aluno.id))).toEqual([{ valor: 300 }]);
+    expect((await memberPorId(aluno.id))!.vencimento).toBe(addMes(venc, 3));
+
+    // Já vencido: conta 3 meses a partir da data do pagamento.
+    const atrasado = await fabrica.aluno({ login: false, status: "ativo", plano: nome, vencimentoEm: -10 });
+    const r = await enviar("admin", { id: randomUUID(), tipo: "pagamento", payload: { ...item.payload, member_id: atrasado.id } });
+    expect(await r.json()).toEqual({ ok: true });
+    expect((await memberPorId(atrasado.id))!.vencimento).toBe(addMes(hojeSP(), 3));
+  });
+
+  test("aula avulsa não é plano de aluno; plano em uso não vira avulso", async ({ fabrica }) => {
+    const avulsa = await planoId(await planoDeTeste("avulsa", 50));
+    const aluno = await fabrica.aluno({ login: false, status: "ativo", plano: "1x", vencimentoEm: 5 });
+    const r = await enviar("admin", { id: randomUUID(), tipo: "aluno_editar", payload: { member_id: aluno.id, campos: { plan_id: avulsa } } });
+    expect(await r.json()).toEqual({ ok: false, tipo: "regra", mensagem: "Aula avulsa não é plano de aluno. Escolha um plano mensal." });
+    expect((await memberPorId(aluno.id))!.plan_id).toBe(await planoId("1x"));
+
+    const id = randomUUID();
+    fabrica.registrarMembro(id);
+    const criar = { member_id: id, nome: "E2e Avulsa Teste", telefone: `119${Date.now().toString().slice(-8)}`, email: null, plan_id: avulsa, valor_acordado: null, treino_ids: [] };
+    expect(await (await enviar("admin", { id: randomUUID(), tipo: "aluno_criar", payload: criar })).json())
+      .toEqual({ ok: false, tipo: "regra", mensagem: "Aula avulsa não é plano de aluno. Escolha um plano mensal." });
+
+    const tri = await planoDeTeste("trimestral", 300);
+    await fabrica.aluno({ login: false, status: "ativo", plano: tri, vencimentoEm: 5 });
+    const { error } = await (await comoAdmin()).from("plans").update({ tipo: "avulsa" }).eq("nome", tri);
+    expect(error?.message).toContain("plano_em_uso_vira_avulso");
+  });
+
   test("regras do pagamento viram recusa 'regra' com mensagem amigável", async ({ fabrica }) => {
     const semPlano = await fabrica.aluno({ login: false, status: "pendente", plano: null });
     const casos: [Record<string, unknown>, string][] = [
@@ -235,6 +284,11 @@ test.describe("RLS e permissões no banco", () => {
     expect((await sb.from("slots").select("capacidade").limit(1)).error?.message).toMatch(/permission denied/);
     expect((await sb.from("members").select("id")).error?.message).toMatch(/permission denied/);
     expect((await sb.from("payments").select("id")).error?.message).toMatch(/permission denied/);
+    // Planos: o que a home usa (tipo e ordem inclusive), só os marcados para a home.
+    const planos = ok(await sb.from("plans").select("nome,tipo,ordem,exibir_na_home").order("ordem")) as { exibir_na_home: boolean }[];
+    expect(planos.length).toBeGreaterThan(0);
+    expect(planos.every((p) => p.exibir_na_home)).toBe(true);
+    expect((await sb.from("plans").select("id").limit(1)).error?.message).toMatch(/permission denied/);
     expect((await sb.from("member_financeiro").select("member_id")).error?.message).toMatch(/permission denied/);
     // Depoimentos: o visitante só vê os aprovados.
     const deps = ok(await sb.from("depoimentos").select("status")) as { status: string }[];

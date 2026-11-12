@@ -16,7 +16,8 @@ export function telefoneUnico() {
   return `119${n}`;
 }
 
-export type Plano = "1x" | "2x" | "3x";
+/** Planos do seed ou um criado pelo próprio teste (nome com prefixo E2E). */
+export type Plano = "1x" | "2x" | "3x" | `E2E${string}`;
 
 export type OpcoesAluno = {
   /** Primeiro nome; o sobrenome é sempre "Teste" (home mostra "Nome T."). */

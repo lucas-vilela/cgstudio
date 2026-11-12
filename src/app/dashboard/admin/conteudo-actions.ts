@@ -5,14 +5,46 @@ import { CMS_TAGS } from "@/lib/cms";
 import { TREINO_ICONES } from "@/lib/treino-icones";
 import { admin, done, fail, type Result } from "./action-utils";
 import { friendlyError } from "./errors";
-import type { DepoimentoStatus, SiteConfigRow } from "./types";
+import type { DepoimentoStatus, PlanoTipo, SiteConfigRow } from "./types";
 
 const refresh = () => revalidatePath("/dashboard/admin", "layout");
+
+type Admin = Exclude<Awaited<ReturnType<typeof admin>>, { error: string }>;
+
+// Próxima posição no fim da lista.
+async function proximaOrdem(a: Admin, tabela: "plans" | "treinos") {
+  const { data } = await a.supabase
+    .from(tabela)
+    .select("ordem")
+    .order("ordem", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data?.ordem ?? 0) + 1;
+}
+
+// Troca de lugar com o vizinho e renumera a lista inteira (evita empates em `ordem`).
+async function reordenar(a: Admin, tabela: "plans" | "treinos", id: number, direcao: "up" | "down") {
+  const { data, error } = await a.supabase.from(tabela).select("id,ordem").order("ordem").order("id");
+  if (error || !data) return friendlyError(error, "Não foi possível reordenar.");
+  const ids = data.map((t) => t.id);
+  const i = ids.indexOf(id);
+  const j = direcao === "up" ? i - 1 : i + 1;
+  if (i < 0 || j < 0 || j >= ids.length) return null;
+  [ids[i], ids[j]] = [ids[j], ids[i]];
+  const atual = new Map(data.map((t) => [t.id, t.ordem]));
+  for (const [pos, tid] of ids.entries()) {
+    if (atual.get(tid) === pos + 1) continue;
+    const res = await a.supabase.from(tabela).update({ ordem: pos + 1 }).eq("id", tid);
+    if (res.error) return friendlyError(res.error, "Não foi possível reordenar.");
+  }
+  return null;
+}
 
 // ---------------------------------------------------------------- planos
 
 type PlanoInput = {
   nome: string;
+  tipo: PlanoTipo;
   vezesSemana: number;
   valorPadrao: number;
   descricao: string;
@@ -22,16 +54,19 @@ type PlanoInput = {
 function validatePlano(i: PlanoInput) {
   const nome = i.nome.trim();
   if (!nome || nome.length > 30) return "Informe o nome do plano (até 30 caracteres).";
-  if (!Number.isInteger(i.vezesSemana) || i.vezesSemana < 1 || i.vezesSemana > 7)
+  if (!["mensal", "trimestral", "avulsa"].includes(i.tipo)) return "Tipo de plano inválido.";
+  if (i.tipo !== "avulsa" && (!Number.isInteger(i.vezesSemana) || i.vezesSemana < 1 || i.vezesSemana > 7))
     return "Aulas por semana deve ser de 1 a 7.";
   if (!Number.isFinite(i.valorPadrao) || i.valorPadrao < 0 || i.valorPadrao > 100000) return "Valor inválido.";
   if (i.descricao.trim().length > 120) return "Descrição muito longa (máx. 120).";
   return null;
 }
 
+// Aula avulsa não tem frequência: grava 1 só para cumprir a coluna (nunca vira limite de aluno).
 const planoRow = (i: PlanoInput) => ({
   nome: i.nome.trim(),
-  vezes_semana: i.vezesSemana,
+  tipo: i.tipo,
+  vezes_semana: i.tipo === "avulsa" ? 1 : i.vezesSemana,
   valor_padrao: Math.round(i.valorPadrao * 100) / 100,
   descricao: i.descricao.trim() || null,
   exibir_na_home: !!i.exibirNaHome,
@@ -42,7 +77,8 @@ export async function createPlano(input: PlanoInput): Promise<Result> {
   if ("error" in a) return fail(a.error);
   const invalid = validatePlano(input);
   if (invalid) return fail(invalid);
-  const { error } = await a.supabase.from("plans").insert(planoRow(input));
+  const ordem = await proximaOrdem(a, "plans");
+  const { error } = await a.supabase.from("plans").insert({ ...planoRow(input), ordem });
   if (error) return fail(friendlyError(error, "Não foi possível criar o plano."));
   updateTag(CMS_TAGS.planos);
   refresh();
@@ -98,6 +134,16 @@ export async function deletePlano(
   return { ok: true, data: { excluido: true } };
 }
 
+export async function movePlano(id: number, direcao: "up" | "down"): Promise<Result> {
+  const a = await admin();
+  if ("error" in a) return fail(a.error);
+  const erro = await reordenar(a, "plans", id, direcao);
+  if (erro) return fail(erro);
+  updateTag(CMS_TAGS.planos);
+  refresh();
+  return done();
+}
+
 // ---------------------------------------------------------------- treinos
 
 function validateTreino(i: { nome: string; descricao: string; icone: string }) {
@@ -122,13 +168,8 @@ export async function saveTreino(input: {
   const row = { nome: input.nome.trim(), descricao: input.descricao.trim(), icone: input.icone };
 
   if (input.id == null) {
-    const { data: ultimo } = await a.supabase
-      .from("treinos")
-      .select("ordem")
-      .order("ordem", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const { error } = await a.supabase.from("treinos").insert({ ...row, ordem: (ultimo?.ordem ?? 0) + 1 });
+    const ordem = await proximaOrdem(a, "treinos");
+    const { error } = await a.supabase.from("treinos").insert({ ...row, ordem });
     if (error) return fail(friendlyError(error, "Não foi possível criar o treino."));
   } else {
     const { data, error } = await a.supabase.from("treinos").update(row).eq("id", input.id).select("id");
@@ -159,23 +200,11 @@ export async function deleteTreino(id: number): Promise<Result> {
   return done();
 }
 
-// Troca de lugar com o vizinho e renumera a lista inteira (evita empates em `ordem`).
 export async function moveTreino(id: number, direcao: "up" | "down"): Promise<Result> {
   const a = await admin();
   if ("error" in a) return fail(a.error);
-  const { data, error } = await a.supabase.from("treinos").select("id,ordem").order("ordem").order("id");
-  if (error || !data) return fail(friendlyError(error, "Não foi possível reordenar."));
-  const ids = data.map((t) => t.id);
-  const i = ids.indexOf(id);
-  const j = direcao === "up" ? i - 1 : i + 1;
-  if (i < 0 || j < 0 || j >= ids.length) return done();
-  [ids[i], ids[j]] = [ids[j], ids[i]];
-  const atual = new Map(data.map((t) => [t.id, t.ordem]));
-  for (const [pos, tid] of ids.entries()) {
-    if (atual.get(tid) === pos + 1) continue;
-    const res = await a.supabase.from("treinos").update({ ordem: pos + 1 }).eq("id", tid);
-    if (res.error) return fail(friendlyError(res.error, "Não foi possível reordenar."));
-  }
+  const erro = await reordenar(a, "treinos", id, direcao);
+  if (erro) return fail(erro);
   updateTag(CMS_TAGS.treinos);
   refresh();
   return done();

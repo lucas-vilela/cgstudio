@@ -3,6 +3,7 @@ import type { Cell, Row } from "write-excel-file/browser";
 import { DIAS, formatDate, hhmm, todayISO } from "@/app/dashboard/admin/format";
 import { formaLabel } from "@/app/dashboard/admin/types";
 import { formatPhone, statusLabel } from "@/app/dashboard/members";
+import { NOME_TIPO } from "@/lib/planos";
 import { anamnesePreenchida, MEDIDAS, PERGUNTAS, type CampoAnamnese } from "@/lib/anamnese";
 import { descreverItem } from "./descricao";
 import type { ItemFila } from "./tipos";
@@ -45,8 +46,11 @@ export async function exportarPlanilha(visao: Visao, fila: ItemFila[]) {
   ];
 
   const planos: Row[] = [
-    ["Nome", "Aulas por semana", "Valor padrão (R$)", "Descrição", "Na home"].map(titulo),
-    ...visao.plans.map((p): Row => [p.nome, p.vezes_semana, dinheiro(p.valor_padrao), txt(p.descricao), p.exibir_na_home ? "Sim" : "Não"]),
+    ["Nome", "Tipo", "Aulas por semana", "Valor padrão (R$)", "Descrição", "Na home"].map(titulo),
+    ...visao.plans.map((p): Row => [
+      p.nome, NOME_TIPO[p.tipo] ?? NOME_TIPO.mensal, p.tipo === "avulsa" ? null : p.vezes_semana,
+      dinheiro(p.valor_padrao), txt(p.descricao), p.exibir_na_home ? "Sim" : "Não",
+    ]),
   ];
 
   // Ficha do aluno: as perguntas da folha como cabeçalho, uma linha por aluno com anamnese.
@@ -76,7 +80,7 @@ export async function exportarPlanilha(visao: Visao, fila: ItemFila[]) {
     { sheet: "Alunos", data: alunos, columns: [{ width: 30 }, { width: 18 }, { width: 30 }, { width: 10 }, { width: 12 }, { width: 10 }, { width: 12 }, { width: 30 }, { width: 12 }, { width: 30 }] },
     { sheet: "Pagamentos", data: pagamentos, columns: [{ width: 12 }, { width: 30 }, { width: 12 }, { width: 10 }, { width: 40 }, { width: 30 }] },
     { sheet: "Horários", data: horarios, columns: [{ width: 10 }, { width: 8 }, { width: 8 }, { width: 11 }, { width: 10 }, { width: 8 }, { width: 60 }] },
-    { sheet: "Planos", data: planos, columns: [{ width: 12 }, { width: 16 }, { width: 16 }, { width: 40 }, { width: 10 }] },
+    { sheet: "Planos", data: planos, columns: [{ width: 12 }, { width: 12 }, { width: 16 }, { width: 16 }, { width: 40 }, { width: 10 }] },
     { sheet: "Anamnese", data: anamneses, columns: [{ width: 30 }, ...campos.map(() => ({ width: 28 })), { width: 14 }] },
     { sheet: "Medidas", data: medidas, columns: [{ width: 30 }, { width: 12 }, ...MEDIDAS.map(() => ({ width: 14 })), { width: 40 }, { width: 60 }] },
   ];

@@ -27,8 +27,9 @@ export async function getPlans(): Promise<Plan[]> {
   const rows = check(
     await supabase
       .from("plans")
-      .select("id,nome,vezes_semana,valor_padrao,descricao,exibir_na_home")
-      .order("vezes_semana"),
+      .select("id,nome,vezes_semana,valor_padrao,descricao,exibir_na_home,tipo,ordem")
+      .order("ordem")
+      .order("id"),
     "plans",
   );
   return rows.map((p: Plan) => ({ ...p, valor_padrao: num(p.valor_padrao) }));

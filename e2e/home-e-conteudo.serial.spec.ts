@@ -1,8 +1,8 @@
 import type { Page } from "@playwright/test";
 import { test, expect, storageStatePath } from "./support/test";
 import { comoAdmin, db, ok } from "./support/db";
-import { esperarServerAction } from "./support/rede";
-import { toast } from "./support/ui";
+import { abrirAdmin, esperarServerAction } from "./support/rede";
+import { escolher, toast } from "./support/ui";
 
 // Conteúdo global da home (projeto `serial`: um teste por vez, porque mudam o que todo visitante vê).
 // 1) a home mostra o que está no banco; 2) o que o admin muda em Conteúdo aparece na home na hora
@@ -21,6 +21,11 @@ const configNoBanco = async () =>
 const valor = (c: Config, k: keyof typeof PADRAO) => (c[k]?.trim() ? c[k]!.trim() : PADRAO[k]);
 
 const preco = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+const SUFIXO = { mensal: "/mês", trimestral: "/trimestre", avulsa: "/aula" } as const;
+
+type PlanoLinha = { id: number; nome: string; valor_padrao: string; vezes_semana: number; descricao: string | null; tipo: keyof typeof SUFIXO; ordem: number };
+const planosDaHome = async () =>
+  ok(await db.from("plans").select("id,nome,valor_padrao,vezes_semana,descricao,tipo,ordem").eq("exibir_na_home", true).order("ordem").order("nome")) as PlanoLinha[];
 
 async function home(page: Page) {
   await page.goto("/");
@@ -39,15 +44,14 @@ test.describe("home mostra o conteúdo do banco", () => {
     await expect(contato).toContainText(`@${valor(c, "instagram")}`);
   });
 
-  test("planos visíveis na home, em ordem de frequência, com preço", async ({ page }) => {
-    const planos = ok(await db.from("plans").select("nome,valor_padrao,vezes_semana,descricao").eq("exibir_na_home", true).order("vezes_semana")) as
-      { nome: string; valor_padrao: string; vezes_semana: number; descricao: string | null }[];
+  test("planos visíveis na home, na ordem definida pelo admin, com preço", async ({ page }) => {
+    const planos = await planosDaHome();
     await home(page);
     const cartoes = page.locator("#planos li");
     await expect(cartoes).toHaveCount(planos.length);
     for (const [i, p] of planos.entries()) {
       await expect(cartoes.nth(i).getByRole("heading")).toHaveText(p.nome);
-      await expect(cartoes.nth(i)).toContainText(`R$${preco.format(Number(p.valor_padrao))}/mês`);
+      await expect(cartoes.nth(i)).toContainText(`R$${preco.format(Number(p.valor_padrao))}${SUFIXO[p.tipo]}`);
       await expect(cartoes.nth(i)).toContainText(p.descricao ?? `${p.vezes_semana} ${p.vezes_semana === 1 ? "aula" : "aulas"} por semana`);
     }
   });
@@ -81,7 +85,8 @@ test.describe("admin › Conteúdo altera a home", () => {
 
   test.afterAll(async () => {
     // Rede de segurança se um teste falhar no meio (na volta normal, a própria tela restaura).
-    await db.from("plans").delete().ilike("nome", "E2E%");
+    // "E2E api…" são do projeto `api`, que roda ao mesmo tempo.
+    await db.from("plans").delete().ilike("nome", "E2E%").not("nome", "ilike", "E2E api%");
     await db.from("treinos").delete().ilike("nome", "E2E%");
   });
 
@@ -94,7 +99,7 @@ test.describe("admin › Conteúdo altera a home", () => {
     const dialogo = page.getByRole("dialog");
     await dialogo.getByLabel("Nome").fill("E2E 4x");
     await dialogo.getByLabel("Aulas/semana").fill("8");
-    await dialogo.getByLabel("Valor padrão (R$)").fill("120,00");
+    await dialogo.getByLabel("Valor por mês (R$)").fill("120,00");
     await dialogo.getByRole("button", { name: "Criar plano" }).click();
     await expect(dialogo.getByRole("alert")).toHaveText("Aulas por semana deve ser de 1 a 7.");
     await dialogo.getByLabel("Aulas/semana").fill("4");
@@ -103,8 +108,11 @@ test.describe("admin › Conteúdo altera a home", () => {
     await dialogo.getByRole("button", { name: "Criar plano" }).click();
     await acao;
     await expect(toast(page, "Plano E2E 4x criado.")).toBeVisible();
-    expect(ok(await db.from("plans").select("vezes_semana,valor_padrao,descricao,exibir_na_home").eq("nome", "E2E 4x").single()))
-      .toEqual({ vezes_semana: 4, valor_padrao: 120, descricao: "Quatro aulas na semana", exibir_na_home: true });
+    expect(ok(await db.from("plans").select("vezes_semana,valor_padrao,descricao,exibir_na_home,tipo").eq("nome", "E2E 4x").single()))
+      .toEqual({ vezes_semana: 4, valor_padrao: 120, descricao: "Quatro aulas na semana", exibir_na_home: true, tipo: "mensal" });
+    // Plano novo entra no fim da lista.
+    const ultimo = ok(await db.from("plans").select("nome").order("ordem", { ascending: false }).order("id", { ascending: false }).limit(1)) as { nome: string }[];
+    expect(ultimo[0].nome).toBe("E2E 4x");
 
     await visitante.goto("/");
     const cartao = visitante.locator("#planos li").filter({ has: visitante.getByRole("heading", { name: "E2E 4x" }) });
@@ -113,7 +121,7 @@ test.describe("admin › Conteúdo altera a home", () => {
 
     // Editar: o cartão do plano é um formulário próprio.
     const form = page.locator("li").filter({ has: page.locator('input[value="E2E 4x"]') });
-    await form.getByLabel("Valor padrão (R$)").fill("135,5");
+    await form.getByLabel("Valor por mês (R$)").fill("135,5");
     acao = esperarServerAction(page);
     await form.getByRole("button", { name: "Salvar" }).click();
     await acao;
@@ -136,6 +144,82 @@ test.describe("admin › Conteúdo altera a home", () => {
     await acao;
     await expect(toast(page, "Plano E2E 4x excluído.")).toBeVisible();
     expect(ok(await db.from("plans").select("id").eq("nome", "E2E 4x"))).toEqual([]);
+  });
+
+  test("aula avulsa e plano trimestral: preço por aula/trimestre na home; avulsa fora do cadastro de aluno", async ({ page, outraJanela }) => {
+    const visitante = await outraJanela("visitante");
+    await page.goto("/dashboard/admin/conteudo");
+
+    await page.getByRole("button", { name: "Novo plano" }).click();
+    let dialogo = page.getByRole("dialog");
+    await escolher(dialogo, "Tipo", "Aula avulsa (só na home)");
+    await expect(dialogo.getByLabel("Aulas/semana")).toHaveCount(0);
+    await dialogo.getByLabel("Nome").fill("E2E Avulsa");
+    await dialogo.getByLabel("Valor por aula (R$)").fill("60");
+    let acao = esperarServerAction(page);
+    await dialogo.getByRole("button", { name: "Criar plano" }).click();
+    await acao;
+    await expect(toast(page, "Plano E2E Avulsa criado.")).toBeVisible();
+
+    await page.getByRole("button", { name: "Novo plano" }).click();
+    dialogo = page.getByRole("dialog");
+    await escolher(dialogo, "Tipo", "Plano trimestral");
+    await dialogo.getByLabel("Nome").fill("E2E Tri 2x");
+    await dialogo.getByLabel("Aulas/semana").fill("2");
+    await dialogo.getByLabel("Valor do trimestre (R$)").fill("390");
+    acao = esperarServerAction(page);
+    await dialogo.getByRole("button", { name: "Criar plano" }).click();
+    await acao;
+    await expect(toast(page, "Plano E2E Tri 2x criado.")).toBeVisible();
+
+    expect(ok(await db.from("plans").select("nome,tipo,vezes_semana,valor_padrao").in("nome", ["E2E Avulsa", "E2E Tri 2x"]).order("nome"))).toEqual([
+      { nome: "E2E Avulsa", tipo: "avulsa", vezes_semana: 1, valor_padrao: 60 },
+      { nome: "E2E Tri 2x", tipo: "trimestral", vezes_semana: 2, valor_padrao: 390 },
+    ]);
+
+    await visitante.goto("/");
+    const avulsa = visitante.locator("#planos li").filter({ has: visitante.getByRole("heading", { name: "E2E Avulsa" }) });
+    await expect(avulsa).toContainText("R$60/aula");
+    await expect(avulsa).toContainText("Pague só pela aula que fizer, sem mensalidade");
+    await expect(avulsa).not.toContainText("/mês");
+    const tri = visitante.locator("#planos li").filter({ has: visitante.getByRole("heading", { name: "E2E Tri 2x" }) });
+    await expect(tri).toContainText("R$390/trimestre");
+    await expect(tri).toContainText("2 aulas por semana");
+
+    // Cadastro de aluno: o trimestral é opção, a aula avulsa não.
+    await abrirAdmin(page);
+    await page.getByRole("button", { name: "Novo aluno" }).click();
+    await page.getByRole("dialog").getByRole("combobox", { name: "Plano" }).click();
+    await expect(page.getByRole("option", { name: /^E2E Tri 2x · .* por trimestre$/ })).toBeVisible();
+    await expect(page.getByRole("option", { name: /^E2E Avulsa/ })).toHaveCount(0);
+    await page.keyboard.press("Escape");
+  });
+
+  test("planos: setas mudam a ordem na home", async ({ page, outraJanela }) => {
+    const visitante = await outraJanela("visitante");
+    const antes = await planosDaHome();
+    expect(antes.length).toBeGreaterThanOrEqual(2);
+    const [primeiro, segundo] = antes;
+
+    await page.goto("/dashboard/admin/conteudo");
+    await expect(page.getByRole("button", { name: `Subir ${primeiro.nome}`, exact: true })).toBeDisabled();
+    let acao = esperarServerAction(page);
+    await page.getByRole("button", { name: `Descer ${primeiro.nome}`, exact: true }).click();
+    await acao;
+    await expect(page.getByRole("button", { name: `Subir ${segundo.nome}`, exact: true })).toBeDisabled();
+
+    await visitante.goto("/");
+    await expect(visitante.locator("#planos li h3").nth(0)).toHaveText(segundo.nome);
+    await expect(visitante.locator("#planos li h3").nth(1)).toHaveText(primeiro.nome);
+
+    // Volta ao original.
+    acao = esperarServerAction(page);
+    await page.getByRole("button", { name: `Subir ${primeiro.nome}`, exact: true }).click();
+    await acao;
+    await expect(page.getByRole("button", { name: `Subir ${primeiro.nome}`, exact: true })).toBeDisabled();
+    expect((await planosDaHome()).map((p) => p.nome)).toEqual(antes.map((p) => p.nome));
+    await visitante.reload();
+    await expect(visitante.locator("#planos li h3").nth(0)).toHaveText(primeiro.nome);
   });
 
   test("plano em uso não é excluído: a tela lista quem usa", async ({ page }) => {
